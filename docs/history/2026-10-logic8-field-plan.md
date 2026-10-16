@@ -1,3 +1,5 @@
+> **Historical (2026-10-16).** The plan for the first Logic 8 session. The results are in `docs/protocol.md`. The wiring table's "expected" labels were disproved.
+
 # Field capture plan — Saleae Logic 8 on the RJ45 diagnostic port
 
 Goal: start over on the physical layer. Record every RJ45 pin raw (analog + digital)

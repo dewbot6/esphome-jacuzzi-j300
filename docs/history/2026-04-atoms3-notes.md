@@ -1,8 +1,4 @@
----
-name: Jacuzzi J355 monitor project
-description: ESPHome RS-485 passive monitor on M5Stack AtomS3 Lite — hardware, protocol, file layout, GPIO mapping
-type: project
----
+> **Historical (April 2026).** Early notes from the M5Stack AtomS3 attempt. That hardware was abandoned.
 
 ESPHome passive RS-485 monitor for a Jacuzzi J355 hot tub, targeting an M5Stack AtomS3 Lite (ESP32-S3).
 

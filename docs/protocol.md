@@ -2,6 +2,7 @@
 
 Board: PCB `6600-087 REV D`, PN `4PB00931D`, PIC (DIP-28, `REV 3.61A`) at 4 MHz.
 Captured 2026-10-16 with a Saleae Logic 8 (`captures/`, decoder `tools/slots.py`).
+Firmware: `components/jacuzzi_monitor/`.
 
 It is **not RS-485 or a UART**. There is no transceiver on the board; the RJ45 lines
 go straight to the PIC. The display data line itself is not on the RJ45, but the
@@ -74,7 +75,8 @@ keeps working normally with the receiver attached.
 
 - Ignore pulses < 1 µs on CLK: pump/heater relays and the light driver inject
   0.1–1 µs glitches.
-- Stretched gaps (~40 µs) occasionally appear inside a frame (PIC interrupt) —
-  treat that slot as unknown and keep the previous frame's value.
+- Stretched gaps (~40 µs) occasionally appear inside a frame (PIC interrupt) or the
+  1 s header precedes it. The firmware drops such frames, and the next one arrives in 100 ms.
+  A value is only published after two identical frames in a row.
 - The port is receive-only for us. Never drive these lines (C96 error and stuck
   recirc pump history).
