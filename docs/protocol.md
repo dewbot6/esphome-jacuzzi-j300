@@ -65,7 +65,9 @@ B− → RJ45 pin 4**, RS-485 GND → pin 3, 120R jumper off, EN (GPIO21) held l
 With the receiver attached, **a clock pulse that follows a 15 µs ('1') gap is lost**,
 probably because the PIC drives the clock only weakly at that point. The bits survive:
 between two observed pulses j < m the gap is 17 + 15·n µs, with slots j..m−2 = 1 and
-slot m−1 = 0. Pulse 1 is also missing (the hidden first bit is 1). The topside panel
+slot m−1 = 0. Pulse 1 is also missing (the hidden first bit is 1). When slot 23
+is 1 (odd units digit) pulse 24 **and all 7 wide pulses** are lost too, so those
+frames are decoded forward from pulse 2 with the trailing missing pulses as 1s. The topside panel
 keeps working normally with the receiver attached.
 
 ## Decoder notes

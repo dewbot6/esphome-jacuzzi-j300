@@ -73,7 +73,8 @@ void JacuzziMonitor::loop() {
   uint32_t now = millis();
   if (now - last_stats_ >= 30000) {
     last_stats_ = now;
-    ESP_LOGD(TAG, "groups=%u frames ok=%u bad=%u", (unsigned) groups_, (unsigned) ok_, (unsigned) bad_);
+    ESP_LOGD(TAG, "groups=%u frames ok=%u (fwd %u) bad=%u", (unsigned) groups_, (unsigned) ok_, (unsigned) fwd_,
+             (unsigned) bad_);
     if (groups_ == 0)
       ESP_LOGW(TAG, "No clock activity on GPIO%d — check A->pin 4, B->pin 3", clock_pin_);
   }
@@ -105,14 +106,16 @@ bool JacuzziMonitor::decode_(const rmt_symbol_word_t *sym, size_t n, uint32_t &b
     }
   }
 done:
-  // The frame ends with 7 wide (~7 us) pulses; the short (~2 us) pulses before them
-  // carry the data.
-  if (pulses < 7 + 2)
-    return false;
-  const size_t w0 = pulses - 7;
-  for (size_t i = w0; i < pulses; i++)
+  // The frame normally ends with 7 wide (~7 us) pulses; the short (~2 us) pulses
+  // before them carry the data. Through the receiver the wide pulses vanish when
+  // slot 23 is 1 (every odd units digit), leaving short pulses only.
+  bool has_wide = pulses >= 7 + 1;
+  for (size_t i = pulses >= 7 ? pulses - 7 : 0; has_wide && i < pulses; i++)
     if (width[i] < 55 || width[i] > 90)
-      return false;
+      has_wide = false;
+  if (!has_wide)
+    return decode_forward_(start, width, pulses, bits);
+  const size_t w0 = pulses - 7;
   size_t first_short = w0;
   while (first_short > 0 && width[first_short - 1] >= 12 && width[first_short - 1] <= 35)
     first_short--;
@@ -122,10 +125,9 @@ done:
   // Through the RS-485 receiver, a clock pulse that follows a 15 us ('1') gap is lost
   // (the line is only weakly driven then), so short pulse k is present only when
   // slot k-1 is 0. Between two observed pulses j < m the gap is 17 + 15*n us, with
-  // slots j..m-2 = 1 and slot m-1 = 0. Walk back from the first wide pulse, which is
-  // always present and follows pulse 24 by 17 us (call it pulse 25); pulse 24 itself
-  // is missing whenever slot 23 is 1. On the Logic 8 (unloaded line) every pulse is
-  // present; see docs/protocol.md.
+  // slots j..m-2 = 1 and slot m-1 = 0. Walk back from the first wide pulse, which
+  // follows pulse 24 by 17 us (call it pulse 25). On the Logic 8 (unloaded line) every
+  // pulse is present; see docs/protocol.md.
   bits = 0;
   int m = 25;
   for (size_t i = w0; i > first_short && m > 1; i--) {
@@ -142,6 +144,39 @@ done:
   // Pulse 1 or 2 must be the earliest one seen (pulse 1 is missing when the hidden
   // first bit is 1). Anything else means a stretched gap (PIC interrupt) — drop it.
   return m <= 2;
+}
+
+// Fallback for captures without the wide pulses (slot 23 = 1). Walk forward from
+// the first short pulse, which is pulse 2 (pulse 1 is missing: hidden first bit = 1;
+// assuming pulse 1 gives impossible BCD on real captures). Pulses after the last one
+// seen are missing, so the trailing slots are 1.
+bool JacuzziMonitor::decode_forward_(const uint32_t *start, const uint32_t *width, size_t pulses,
+                                     uint32_t &bits) {
+  if (pulses < 12)
+    return false;
+  for (size_t i = 0; i < pulses; i++)
+    if (width[i] < 12 || width[i] > 35)
+      return false;
+  bits = 0;
+  int m = 2;
+  for (size_t i = 1; i < pulses; i++) {
+    const int32_t g = static_cast<int32_t>(start[i] - start[i - 1]);
+    const int n = (g - 170 + 75) / 150;
+    const int32_t err = g - (170 + 150 * n);
+    const int j = m;
+    m = j + n + 1;
+    if (n < 0 || err < -25 || err > 25 || m > 24)
+      return false;
+    for (int k = j; k <= m - 2; k++)
+      bits |= 1u << (23 - k);
+  }
+  for (int k = m; k <= 23; k++)
+    bits |= 1u << (23 - k);
+  // Sanity: the display digits must be valid BCD and slot 23 must be 1 for this path.
+  if (((bits >> 8) & 0xF) > 9 || ((bits >> 4) & 0xF) > 9 || (bits & 0xF) > 9 || !(bits & 1))
+    return false;
+  fwd_++;
+  return true;
 }
 
 void JacuzziMonitor::handle_frame_(uint32_t bits) {

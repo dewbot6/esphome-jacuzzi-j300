@@ -46,6 +46,7 @@ class JacuzziMonitor : public Component {
   static bool on_recv_done_(rmt_channel_handle_t ch, const rmt_rx_done_event_data_t *edata, void *arg);
   void arm_();
   bool decode_(const rmt_symbol_word_t *sym, size_t n, uint32_t &bits);
+  bool decode_forward_(const uint32_t *start, const uint32_t *width, size_t pulses, uint32_t &bits);
   void handle_frame_(uint32_t bits);
   void track_temperature_(int disp, uint32_t now);
   void dump_capture_(const rmt_symbol_word_t *sym, size_t n);
@@ -70,7 +71,7 @@ class JacuzziMonitor : public Component {
   int set_val_{-1};
 
   // Stats
-  uint32_t ok_{0}, bad_{0}, groups_{0}, last_stats_{0}, last_dump_{0};
+  uint32_t ok_{0}, bad_{0}, groups_{0}, last_stats_{0}, last_dump_{0}, fwd_{0};
 
   sensor::Sensor *water_{nullptr}, *setpoint_{nullptr}, *display_{nullptr};
   binary_sensor::BinarySensor *heater_{nullptr}, *jets1_{nullptr}, *jets2_{nullptr}, *slot5_{nullptr};
