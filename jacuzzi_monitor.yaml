@@ -32,6 +32,8 @@ logger:
   baud_rate: 115200
 
 api:
+  encryption:
+    key: !secret api_encryption_key
 
 ota:
   - platform: esphome
