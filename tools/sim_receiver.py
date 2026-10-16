@@ -54,12 +54,12 @@ def track(disp, now):
         st['prev'], st['prev_held'] = st['disp'], now - st['since']
         st['disp'], st['since'], st['settled'] = disp, now, False
         return
-    if st['settled'] or now - st['since'] < 4000: return
+    if st['settled'] or now - st["since"] < 5000: return
     st['settled'] = True
     if st['water'] != disp: st['water'] = disp; print(f"{now/1000:7.2f}s  WATER {disp}")
     sp = None
     if st['prev'] >= 0 and st['prev'] != disp:
-        if 2500 <= st['prev_held'] <= 3700: sp = st['prev']        # display reverted to water
+        if 2500 <= st["prev_held"] <= 4800: sp = st['prev']        # display reverted to water
         elif st['prev_held'] < 2500: sp = disp                     # a press landed on the water temp
     if sp is not None and sp != st['setv']: st['setv'] = sp; print(f"{now/1000:7.2f}s  SET POINT {sp}")
 

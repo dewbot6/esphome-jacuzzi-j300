@@ -39,9 +39,9 @@ class JacuzziMonitor : public Component {
   static constexpr uint32_t RMT_RESOLUTION_HZ = 10'000'000;
   static constexpr size_t RMT_SYMBOLS = 96;
   static constexpr size_t SLOTS = 23;           // visible bits per frame
-  static constexpr uint32_t STABLE_MS = 4000;   // display unchanged this long = settled (water temp)
+  static constexpr uint32_t STABLE_MS = 5000;   // display unchanged this long = settled (water temp)
   static constexpr uint32_t REVERT_MIN_MS = 2500;  // set-point display reverts ~3.0 s
-  static constexpr uint32_t REVERT_MAX_MS = 3700;  // after the last +/- press
+  static constexpr uint32_t REVERT_MAX_MS = 4800;  // after the last +/- press (seen 3.0-3.9 s live)
 
   static bool on_recv_done_(rmt_channel_handle_t ch, const rmt_rx_done_event_data_t *edata, void *arg);
   void arm_();
