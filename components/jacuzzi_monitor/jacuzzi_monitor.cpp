@@ -116,19 +116,21 @@ done:
   size_t first_short = w0;
   while (first_short > 0 && width[first_short - 1] >= 12 && width[first_short - 1] <= 35)
     first_short--;
-  if (w0 - first_short < 2)
+  if (w0 - first_short < 1)
     return false;
 
   // Through the RS-485 receiver, a clock pulse that follows a 15 us ('1') gap is lost
   // (the line is only weakly driven then), so short pulse k is present only when
   // slot k-1 is 0. Between two observed pulses j < m the gap is 17 + 15*n us, with
-  // slots j..m-2 = 1 and slot m-1 = 0. Walk back from pulse 24 (the last short one).
-  // On the Logic 8 (unloaded line) every pulse is present; see docs/protocol.md.
+  // slots j..m-2 = 1 and slot m-1 = 0. Walk back from the first wide pulse, which is
+  // always present and follows pulse 24 by 17 us (call it pulse 25); pulse 24 itself
+  // is missing whenever slot 23 is 1. On the Logic 8 (unloaded line) every pulse is
+  // present; see docs/protocol.md.
   bits = 0;
-  int m = 24;
-  for (size_t i = w0 - 1; i > first_short && m > 1; i--) {
+  int m = 25;
+  for (size_t i = w0; i > first_short && m > 1; i--) {
     const int32_t g = static_cast<int32_t>(start[i] - start[i - 1]);  // 0.1 us ticks
-    const int n = (g - 170 + 75) / 150;          // round((g - 17 us) / 15 us)
+    const int n = (g - 170 + 75) / 150;                               // round((g - 17 us) / 15 us)
     const int32_t err = g - (170 + 150 * n);
     const int j = m - n - 1;
     if (n < 0 || err < -25 || err > 25 || j < 1)
@@ -178,9 +180,11 @@ void JacuzziMonitor::handle_frame_(uint32_t bits) {
 }
 
 // The display shows water temperature. After a +/- press it shows the set point
-// and reverts to water temperature ~3.0 s after the last press. Decide once the
-// display has settled: the settled value is water temperature, and if the value
-// before it was held for ~3 s, that value was the set point.
+// (the first press only shows it) and reverts to water temperature ~3.0 s after the
+// last press. Decide once the display has settled (unchanged 4 s): the settled value
+// is water temperature. If the value before it was held ~3 s, the display reverted and
+// that value was the set point; if it was held briefly, a press landed on the settled
+// value itself (set point == water temp, so the revert was invisible).
 void JacuzziMonitor::track_temperature_(int disp, uint32_t now) {
   if (disp != disp_) {
     prev_val_ = disp_;
@@ -201,9 +205,15 @@ void JacuzziMonitor::track_temperature_(int disp, uint32_t now) {
     if (water_ != nullptr)
       water_->publish_state(water_val_);
   }
-  if (prev_val_ >= 0 && prev_val_ != disp && prev_held_ >= REVERT_MIN_MS && prev_held_ <= REVERT_MAX_MS &&
-      set_val_ != prev_val_) {
-    set_val_ = prev_val_;
+  int sp = -1;
+  if (prev_val_ >= 0 && prev_val_ != disp) {
+    if (prev_held_ >= REVERT_MIN_MS && prev_held_ <= REVERT_MAX_MS)
+      sp = prev_val_;
+    else if (prev_held_ < REVERT_MIN_MS)
+      sp = disp;
+  }
+  if (sp >= 0 && sp != set_val_) {
+    set_val_ = sp;
     ESP_LOGI(TAG, "set point %d", set_val_);
     if (setpoint_ != nullptr)
       setpoint_->publish_state(set_val_);
