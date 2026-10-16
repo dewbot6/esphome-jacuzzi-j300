@@ -37,22 +37,28 @@ ota:
   - platform: esphome
     password: !secret ota_password
 
-uart:
-  id: uart_bus
-  tx_pin: GPIO17
-  rx_pin:
-    number: GPIO18
-    inverted: true
-  baud_rate: 38400
-  data_bits: 8
-  parity: NONE
-  stop_bits: 1
-  rx_buffer_size: 512
-
 output:
   - platform: gpio
     pin: GPIO21
     id: rs485_de_re
 
+# Isolated RS-485 receiver used as a level shifter: A+ = RJ45 pin 4 (clock),
+# B- = RJ45 pin 3 (ground). Its RX output is GPIO18. Nothing is ever transmitted.
 jacuzzi_monitor:
-  uart_id: uart_bus
+  clock_pin: GPIO18
+  water_temperature:
+    name: Water Temperature
+  set_temperature:
+    name: Set Temperature
+  display_temperature:
+    name: Display
+  heater:
+    name: Heater
+  jets1:
+    name: Jets 1
+  jets2:
+    name: Jets 2
+  slot5:
+    name: Status Slot 5
+  raw_frame:
+    name: Raw Frame

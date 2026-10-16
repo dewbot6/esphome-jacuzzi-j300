@@ -1,7 +1,13 @@
 #pragma once
 
 #include "esphome/core/component.h"
-#include "esphome/components/uart/uart.h"
+#include "esphome/components/binary_sensor/binary_sensor.h"
+#include "esphome/components/sensor/sensor.h"
+#include "esphome/components/text_sensor/text_sensor.h"
+
+#include <freertos/FreeRTOS.h>
+#include <freertos/queue.h>
+#include <driver/rmt_rx.h>
 
 #include <cstdint>
 #include <string>
@@ -9,79 +15,66 @@
 namespace esphome {
 namespace jacuzzi_monitor {
 
-class JacuzziMonitor : public Component, public uart::UARTDevice {
+// Passive decoder for the J-300 panel bus clock on RJ45 pin 4. Receive only:
+// nothing in this component ever drives a pin. See docs/protocol.md.
+class JacuzziMonitor : public Component {
  public:
-  // ── ESPHome lifecycle ────────────────────────────────────────────────────
   void setup() override;
   void loop() override;
   void dump_config() override;
   float get_setup_priority() const override { return setup_priority::DATA; }
 
- private:
-  // ── Constants ────────────────────────────────────────────────────────────
-  static constexpr size_t   MAX_FRAME     = 256;  // Packet accumulation buffer
-  static constexpr size_t   MAX_TX_FRAME  = 32;   // Max TX frame bytes
-  static constexpr uint32_t PACKET_GAP_MS = 10;   // Silence threshold for packet boundary
+  void set_clock_pin(int pin) { clock_pin_ = pin; }
+  void set_water_sensor(sensor::Sensor *s) { water_ = s; }
+  void set_setpoint_sensor(sensor::Sensor *s) { setpoint_ = s; }
+  void set_display_sensor(sensor::Sensor *s) { display_ = s; }
+  void set_heater_sensor(binary_sensor::BinarySensor *s) { heater_ = s; }
+  void set_jets1_sensor(binary_sensor::BinarySensor *s) { jets1_ = s; }
+  void set_jets2_sensor(binary_sensor::BinarySensor *s) { jets2_ = s; }
+  void set_slot5_sensor(binary_sensor::BinarySensor *s) { slot5_ = s; }
+  void set_raw_frame_sensor(text_sensor::TextSensor *s) { raw_ = s; }
 
-  // ── Channel / message-type constants ────────────────────────────────────
-  static constexpr uint8_t CH_BROADCAST    = 0xFF;  // Broadcast channel
-  static constexpr uint8_t CH_ASSIGNMENT   = 0xFE;  // Join handshake channel
+ protected:
+  // RMT: 0.1 us ticks; up to 96 symbols covers a 46-pulse header+frame group.
+  static constexpr uint32_t RMT_RESOLUTION_HZ = 10'000'000;
+  static constexpr size_t RMT_SYMBOLS = 96;
+  static constexpr size_t SLOTS = 23;           // visible bits per frame
+  static constexpr size_t FRAME_PULSES = 31;    // 24 short + 7 wide
+  static constexpr uint32_t STABLE_MS = 4000;   // display unchanged this long = settled (water temp)
+  static constexpr uint32_t REVERT_MIN_MS = 2500;  // set-point display reverts ~3.0 s
+  static constexpr uint32_t REVERT_MAX_MS = 3700;  // after the last +/- press
 
-  static constexpr uint8_t MSG_NEW_CLIENT  = 0x00;  // Main → all: new-client CTS
-  static constexpr uint8_t MSG_JOIN_REQ    = 0x01;  // Us → main: channel request
-  static constexpr uint8_t MSG_JOIN_RESP   = 0x02;  // Main → us: channel assigned
-  static constexpr uint8_t MSG_JOIN_ACK    = 0x03;  // Us → main: ACK assignment
-  static constexpr uint8_t MSG_CTS         = 0x06;  // Main → us: clear to send
-  static constexpr uint8_t MSG_NTS         = 0x07;  // Us → main: nothing to send
-  static constexpr uint8_t MSG_STATUS      = 0x13;  // Main → all: spa status
+  static bool on_recv_done_(rmt_channel_handle_t ch, const rmt_rx_done_event_data_t *edata, void *arg);
+  void arm_();
+  bool decode_(const rmt_symbol_word_t *sym, size_t n, uint32_t &bits);
+  void handle_frame_(uint32_t bits);
+  void track_temperature_(int disp, uint32_t now);
 
-  // ── Bus join state machine ───────────────────────────────────────────────
-  enum class BusState : uint8_t {
-    LISTEN_FOR_CTS,       // Waiting for new-client CTS on CH_ASSIGNMENT
-    WAIT_FOR_ASSIGNMENT,  // Join request sent; awaiting channel response
-    JOINED,               // Active on bus; responding to CTS with NTS
-  };
+  int clock_pin_{-1};
+  rmt_channel_handle_t chan_{nullptr};
+  QueueHandle_t queue_{nullptr};
+  rmt_symbol_word_t buf_[RMT_SYMBOLS]{};
+  rmt_receive_config_t rx_cfg_{};
 
-  BusState bus_state_{BusState::LISTEN_FOR_CTS};
+  // Frame debounce: publish only after two identical valid frames in a row.
+  uint32_t last_bits_{0xFFFFFFFF};
+  uint32_t published_bits_{0xFFFFFFFF};
 
-  uint8_t  my_channel_{0};       // Assigned channel (valid only in JOINED state)
-  uint8_t  join_rand_[2]{};      // Random bytes included in our join request
-  uint32_t last_cts_ms_{0};      // millis() of last CTS received on our channel
-  uint32_t join_attempt_ms_{0};  // millis() when join request was sent
-  uint32_t blind_tx_ms_{0};      // millis() of last blind TX bootstrap transmit
+  // Display tracking (water temp vs. set point shown after a +/- press).
+  int disp_{-1};
+  uint32_t disp_since_{0};
+  int prev_val_{-1};
+  uint32_t prev_held_{0};
+  bool settled_{false};
+  int water_val_{-1};
+  int set_val_{-1};
 
-  // ── Packet accumulator ──────────────────────────────────────────────────
-  uint8_t  buf_[MAX_FRAME]{};      // Non-zero bytes accumulated since last gap
-  size_t   buf_len_{0};            // Bytes in buf_ so far
-  uint32_t last_byte_ms_{0};       // millis() of last received byte (gap timer)
-  uint32_t packet_count_{0};       // Running packet index for log messages
+  // Stats
+  uint32_t ok_{0}, bad_{0}, groups_{0}, last_stats_{0};
 
-  // ── Helpers ──────────────────────────────────────────────────────────────
-
-  // CRC-8: polynomial 0x07, initial 0x02, final XOR 0x02.
-  // Covers all inner-frame bytes from len through last payload byte (excludes CRC).
-  uint8_t compute_crc_(const uint8_t *data, size_t len);
-
-  // Build and transmit a framed message; logs the outgoing frame at INFO level.
-  void send_frame_(uint8_t channel, uint8_t type,
-                   const uint8_t *payload, size_t payload_len);
-
-  // Log accumulated packet bytes at INFO and reset the buffer.
-  void flush_packet_();
-
-  // Validate CRC and dispatch to handlers below.
-  void process_frame_(const uint8_t *data, size_t len);
-
-  // Bus-join handlers
-  void handle_new_client_cts_();
-  void handle_channel_assignment_(const uint8_t *data, size_t len);
-  void handle_cts_();
-
-  // Spa state decoder (CH_BROADCAST / MSG_STATUS)
-  void decode_status_update_(const uint8_t *data, size_t len);
-
-  // Utility: space-separated hex string (capped at 32 bytes)
-  std::string hex_str_(const uint8_t *data, size_t len);
+  sensor::Sensor *water_{nullptr}, *setpoint_{nullptr}, *display_{nullptr};
+  binary_sensor::BinarySensor *heater_{nullptr}, *jets1_{nullptr}, *jets2_{nullptr}, *slot5_{nullptr};
+  text_sensor::TextSensor *raw_{nullptr};
 };
 
 }  // namespace jacuzzi_monitor
