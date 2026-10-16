@@ -7,11 +7,15 @@ Prints a timeline of changes: time, header bits (if any), 24 frame bits.
 """
 import csv, sys, numpy as np
 
+MIN_W = 1.0e-6  # ignore glitches (relay/light switching noise) shorter than 1 us
 rows = csv.reader(open(sys.argv[1])); next(rows)
-prev_v, rise = None, []
+prev_v, t_rise, rise = None, None, []
 for r in rows:
-    v = int(r[3])  # CH2 = RJ45 pin 4
-    if prev_v == 0 and v == 1: rise.append(float(r[0]))
+    t, v = float(r[0]), int(r[3])  # CH2 = RJ45 pin 4
+    if prev_v == 0 and v == 1: t_rise = t
+    elif prev_v == 1 and v == 0 and t_rise is not None:
+        if t - t_rise >= MIN_W: rise.append(t_rise)
+        t_rise = None
     prev_v = v
 
 groups, cur = [], [rise[0]]
