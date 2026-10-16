@@ -39,7 +39,6 @@ class JacuzziMonitor : public Component {
   static constexpr uint32_t RMT_RESOLUTION_HZ = 10'000'000;
   static constexpr size_t RMT_SYMBOLS = 96;
   static constexpr size_t SLOTS = 23;           // visible bits per frame
-  static constexpr size_t FRAME_PULSES = 31;    // 24 short + 7 wide
   static constexpr uint32_t STABLE_MS = 4000;   // display unchanged this long = settled (water temp)
   static constexpr uint32_t REVERT_MIN_MS = 2500;  // set-point display reverts ~3.0 s
   static constexpr uint32_t REVERT_MAX_MS = 3700;  // after the last +/- press
@@ -49,6 +48,7 @@ class JacuzziMonitor : public Component {
   bool decode_(const rmt_symbol_word_t *sym, size_t n, uint32_t &bits);
   void handle_frame_(uint32_t bits);
   void track_temperature_(int disp, uint32_t now);
+  void dump_capture_(const rmt_symbol_word_t *sym, size_t n);
 
   int clock_pin_{-1};
   rmt_channel_handle_t chan_{nullptr};
@@ -70,7 +70,7 @@ class JacuzziMonitor : public Component {
   int set_val_{-1};
 
   // Stats
-  uint32_t ok_{0}, bad_{0}, groups_{0}, last_stats_{0};
+  uint32_t ok_{0}, bad_{0}, groups_{0}, last_stats_{0}, last_dump_{0};
 
   sensor::Sensor *water_{nullptr}, *setpoint_{nullptr}, *display_{nullptr};
   binary_sensor::BinarySensor *heater_{nullptr}, *jets1_{nullptr}, *jets2_{nullptr}, *slot5_{nullptr};

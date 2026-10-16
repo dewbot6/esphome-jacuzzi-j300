@@ -62,6 +62,10 @@ void JacuzziMonitor::loop() {
       handle_frame_(bits);
     } else {
       bad_++;
+      if (millis() - last_dump_ >= 5000) {
+        last_dump_ = millis();
+        dump_capture_(buf_, n);
+      }
     }
     arm_();
   }
@@ -101,30 +105,41 @@ bool JacuzziMonitor::decode_(const rmt_symbol_word_t *sym, size_t n, uint32_t &b
     }
   }
 done:
-  if (pulses < FRAME_PULSES)
+  // The frame ends with 7 wide (~7 us) pulses; the short (~2 us) pulses before them
+  // carry the data.
+  if (pulses < 7 + 2)
+    return false;
+  const size_t w0 = pulses - 7;
+  for (size_t i = w0; i < pulses; i++)
+    if (width[i] < 55 || width[i] > 90)
+      return false;
+  size_t first_short = w0;
+  while (first_short > 0 && width[first_short - 1] >= 12 && width[first_short - 1] <= 35)
+    first_short--;
+  if (w0 - first_short < 2)
     return false;
 
-  // The frame is always the last 31 pulses: 24 short (~2 us) then 7 wide (~7 us).
-  const size_t f = pulses - FRAME_PULSES;
-  for (size_t i = 0; i < FRAME_PULSES; i++) {
-    const uint32_t w = width[f + i];  // 0.1 us ticks
-    const bool ok = (i < 24) ? (w >= 12 && w <= 35) : (w >= 55 && w <= 90);
-    if (!ok)
-      return false;
-  }
-
-  // Gap between short-pulse rising edges: 15 us = 1, 17 us = 0. Anything else
-  // (an interrupt stretched the PIC's loop) invalidates the frame; the next one
-  // arrives in 100 ms.
+  // Through the RS-485 receiver, a clock pulse that follows a 15 us ('1') gap is lost
+  // (the line is only weakly driven then), so short pulse k is present only when
+  // slot k-1 is 0. Between two observed pulses j < m the gap is 17 + 15*n us, with
+  // slots j..m-2 = 1 and slot m-1 = 0. Walk back from pulse 24 (the last short one).
+  // On the Logic 8 (unloaded line) every pulse is present; see docs/protocol.md.
   bits = 0;
-  for (size_t k = 1; k <= SLOTS; k++) {
-    const uint32_t d = start[f + k] - start[f + k - 1];
-    if (d >= 135 && d < 160)
+  int m = 24;
+  for (size_t i = w0 - 1; i > first_short && m > 1; i--) {
+    const int32_t g = static_cast<int32_t>(start[i] - start[i - 1]);  // 0.1 us ticks
+    const int n = (g - 170 + 75) / 150;          // round((g - 17 us) / 15 us)
+    const int32_t err = g - (170 + 150 * n);
+    const int j = m - n - 1;
+    if (n < 0 || err < -25 || err > 25 || j < 1)
+      break;
+    for (int k = j; k <= m - 2; k++)
       bits |= 1u << (23 - k);
-    else if (d < 135 || d > 185)
-      return false;
+    m = j;
   }
-  return true;
+  // Pulse 1 or 2 must be the earliest one seen (pulse 1 is missing when the hidden
+  // first bit is 1). Anything else means a stretched gap (PIC interrupt) — drop it.
+  return m <= 2;
 }
 
 void JacuzziMonitor::handle_frame_(uint32_t bits) {
@@ -193,6 +208,21 @@ void JacuzziMonitor::track_temperature_(int disp, uint32_t now) {
     if (setpoint_ != nullptr)
       setpoint_->publish_state(set_val_);
   }
+}
+
+// Debug: log the raw RMT capture (level:duration in 0.1 us ticks) of a failed frame.
+void JacuzziMonitor::dump_capture_(const rmt_symbol_word_t *sym, size_t n) {
+  std::string out;
+  char tmp[16];
+  size_t shown = 0;
+  for (size_t i = 0; i < n && shown < 64; i++) {
+    snprintf(tmp, sizeof(tmp), "%u:%u ", (unsigned) sym[i].level0, (unsigned) sym[i].duration0);
+    out += tmp;
+    snprintf(tmp, sizeof(tmp), "%u:%u ", (unsigned) sym[i].level1, (unsigned) sym[i].duration1);
+    out += tmp;
+    shown++;
+  }
+  ESP_LOGD(TAG, "bad capture: %u symbols: %s", (unsigned) n, out.c_str());
 }
 
 void JacuzziMonitor::dump_config() {

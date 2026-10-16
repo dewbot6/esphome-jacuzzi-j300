@@ -54,6 +54,20 @@ The heater flag updates on the 1 s tick.
 **Not on this bus:** Light on/off and light color (footprint-bulb button).
 Their only trace is sub-µs switching noise on pins 4/6.
 
+## ESP32 hookup (Waveshare ESP32-S3-RS485-CAN)
+
+The isolated RS-485 receiver works as a level shifter, wired **A+ → RJ45 pin 3,
+B− → RJ45 pin 4**, RS-485 GND → pin 3, 120R jumper off, EN (GPIO21) held low.
+(A+ on pin 4 does *not* work: idle A−B ≈ 0 V sits in the receiver's fail-safe
+"high" zone, so pulses barely register.) The output on GPIO18 is an inverted clock;
+`components/jacuzzi_monitor` times it with RMT RX and auto-detects polarity.
+
+With the receiver attached, **a clock pulse that follows a 15 µs ('1') gap is lost**,
+probably because the PIC drives the clock only weakly at that point. The bits survive:
+between two observed pulses j < m the gap is 17 + 15·n µs, with slots j..m−2 = 1 and
+slot m−1 = 0. Pulse 1 is also missing (the hidden first bit is 1). The topside panel
+keeps working normally with the receiver attached.
+
 ## Decoder notes
 
 - Ignore pulses < 1 µs on CLK: pump/heater relays and the light driver inject
