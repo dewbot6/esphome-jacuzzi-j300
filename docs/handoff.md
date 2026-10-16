@@ -1,0 +1,207 @@
+# Jacuzzi J355 Hot Tub RS-485 Integration — Handoff Document
+
+## Goal
+Integrate a Jacuzzi J355 hot tub with Home Assistant via ESPHome and RS-485, enabling real-time monitoring of temperature, pump states, heating status, and eventual bidirectional control (set temp, toggle pumps/lights).
+
+---
+
+## Hardware
+
+### Hot Tub
+- **Model:** Jacuzzi J355 (2-pump model)
+- **Main Board:** `4PB009310 REV 3.61A`
+- **Connection Point:** RJ45 accessory port on the main board
+
+### RJ45 Pinout (confirmed via oscilloscope)
+| Pin | Signal |
+|-----|--------|
+| 3 | GND |
+| 4 | RS-485 A |
+| 5 | RS-485 B |
+| 1/2 | RS-232 (not used) |
+| 8 | +12V supply (do NOT connect to ESP) |
+
+### ESP32 Board
+- **Current:** Waveshare ESP32-S3-RS485-CAN
+- **RS485 TX:** GPIO17
+- **RS485 RX:** GPIO18
+- **RS485 EN:** GPIO21 (must be held LOW for receive mode)
+
+### RS485 Module
+- Waveshare onboard isolated RS485 (CA-IS3082W or similar)
+- EN pin (GPIO21) held LOW via `output.turn_off` in on_boot at priority 600
+
+---
+
+## Current State
+
+### What Works
+- Blue RX LED on Waveshare board blinks = RS-485 signal confirmed arriving
+- ESP32 is receiving bytes from the hot tub bus
+- Packet structure is visible: regular `00 FE` pattern every ~100ms, `00 FE C0 FE` every ~1 second
+
+### Current UART Settings (best found so far)
+```yaml
+uart:
+  tx_pin: GPIO17
+  rx_pin:
+    number: GPIO18
+    inverted: true
+  baud_rate: 38400
+  data_bits: 8
+  parity: NONE
+  stop_bits: 1
+```
+
+### What the Bus Looks Like Right Now
+```
+PKT[N]   2 bytes | 00 FE          ← every ~100ms (CTS heartbeat)
+PKT[N+x] 4 bytes | 00 FE C0 FE   ← every ~1 second (New Client CTS)
+PKT[N+y] 5 bytes | 00 FE C0 00 FE ← occasional variant
+PKT[N+z] 5 bytes | 00 FE 40 00 FE ← occasional variant
+```
+
+### The Core Unsolved Problem
+**The baud rate and byte interpretation are not confirmed.** The bytes we're seeing (`00 FE C0 FE`) are likely Balboa protocol frames but the exact mapping between wire bytes and protocol bytes is unknown because:
+- At 38400 inverted: `0xFE` appears everywhere but `0x7E` (Balboa frame delimiter) is expected
+- At 38400 7-bit inverted: `0x7E` appeared but `0xFE` channel bytes collide with frame delimiters
+- The Waveshare isolated transceiver may be introducing a signal transformation we haven't accounted for
+
+### Protocol Context
+The Balboa/ProLink protocol frame format is:
+```
+7E [len] [channel] [indicator] [type] [payload...] [CRC] 7E
+```
+- Frame delimiter: `0x7E`
+- New Client CTS: `7E 05 FE BF 00 [crc] 7E` (5 bytes + delimiters)
+- Status Update: type `0x13` on channel `0xFF`, ~3x/second
+- CRC-8: poly 0x07, init 0x02, final XOR 0x02
+
+---
+
+## Files In Flight
+
+### Project Directory: `esphome-jacuzzi/`
+```
+esphome-jacuzzi/
+├── jacuzzi_monitor.yaml          ← main ESPHome config
+├── secrets.yaml                  ← WiFi/OTA credentials
+└── components/
+    └── jacuzzi_monitor/
+        ├── __init__.py           ← ESPHome component declaration
+        ├── jacuzzi_monitor.h     ← C++ header
+        └── jacuzzi_monitor.cpp   ← C++ implementation
+```
+
+### Current YAML State
+- Board: `esp32-s3-devkitc-1`, variant `esp32s3`, framework `esp-idf`
+- WiFi connected, HA API connected
+- EN pin (GPIO21) held LOW via GPIO output component
+- Blind transmit bootstrap: **commented out** (was causing hot tub interference)
+- Packet collector mode active (gap-based, not delimiter-based)
+
+### Current Component State (`jacuzzi_monitor.cpp`)
+- Frame delimiter approach replaced with **gap-based packet collector**
+- Collects all bytes (including 0x00), flushes on >10ms gap
+- Blind join transmit is commented out
+- Status update decoder exists but not being triggered (no valid frames parsed yet)
+
+---
+
+## Failed Attempts / Lessons Learned
+
+### RS-485 Modules Tried
+| Module | Result | Problem |
+|--------|--------|---------|
+| M5Stack U034 | Failed | DE/RE tied to TX via transistor — receiver disabled when TX idle |
+| Seeed Grove RS485 (MAX13487E) | Partial | 5V TTL output incompatible with NanoC6 3.3V GPIO; correct DE/RE circuit |
+| M5Stack AtomS3 Lite | Abandoned | GPIO1 used by USB CDC, unavailable for UART RX |
+| M5Stack NanoC6 | Abandoned | WiFi incompatible with UniFi U7 Outdoor AP |
+| Waveshare ESP32-S3-RS485-CAN | **Current** | EN pin polarity required LOW not HIGH; now receiving data |
+
+### Baud Rates Tried
+| Baud | Inverted | Data Bits | Result |
+|------|----------|-----------|--------|
+| 62500 | No | 8 | `0x0B` garbage |
+| 62500 | Yes | 8 | `0x80` and zeros |
+| 115200 | No | 8 | `0xB9` garbage |
+| 115200 | Yes | 8 | `0xC6` garbage |
+| 57600 | No | 8 | `0x05` garbage |
+| 57600 | Yes | 8 | `0x00` and `0x40` |
+| 67200 | No | 8 | `0xFD 0xFB 0xEF 0xFF` — no framing errors in Logic 2 |
+| 38400 | No | 8 | `0x03 0xFB 0xF3` garbage |
+| 38400 | Yes | 8 | `0xFE` dominant — Balboa channel byte! |
+| 38400 | Yes | 7 | **`0x7E` appeared!** But `0xFE` collides with frame delimiter |
+| 76800 | Yes | 8 | `0xE3` garbage |
+| 31250 | Yes | 8 | Still `0xFE` |
+
+### Hot Tub Interference Caused
+- **C96 error code** appeared when blind join requests were sent at 10Hz
+- **Recirc pump stuck on** for several hours — suspected caused by malformed frames on bus
+- **Lesson:** Never transmit blindly onto the bus. Always wait for proper CTS before responding.
+
+### DE/RE Problem (Resolved)
+All M5Stack RS-485 modules use a transistor circuit where TX idle HIGH = receiver disabled. Solutions attempted:
+- Software GPIO tricks (failed — UART peripheral reclaims pin)
+- Arduino framework (TX idles LOW — partially worked)
+- Dedicated DE/RE GPIO (failed — UART still interfered)
+- **Solution:** Waveshare board has dedicated EN pin (GPIO21) separate from TX
+
+---
+
+## Next Steps
+
+### Immediate — Ground Truth Capture
+**Connect Saleae Logic 8 to GPIO18 (IO18) on Waveshare header:**
+- Logic 8 CH0 → IO18
+- Logic 8 GND → GND
+- In Logic 2: Async Serial, try 38400 then 67200, both normal and inverted
+- This will show exact byte values at the TTL level after isolation
+
+**OR get USB-RS485 adapter from work:**
+- Connect to RJ45 pins 3/4/5
+- Open serial terminal on Mac: `screen /dev/tty.usbserial-* 115200`
+- Try baud rates: 115200, 62500, 38400, 57600
+- Look for `~` characters (= `0x7E` frame delimiter in screen)
+
+### Once Baud Rate Confirmed
+1. Update `jacuzzi_monitor.yaml` with confirmed UART settings
+2. Restore delimiter-based frame parser in `jacuzzi_monitor.cpp`
+3. Verify STATUS frame decoding (type `0x13`, or `0x16` for J-series variant)
+4. Add Home Assistant sensors for temp, pumps, heat state
+5. Re-enable join sequence (properly CTS-triggered, not blind)
+
+### Home Assistant Integration (Future)
+Add to `jacuzzi_monitor.yaml`:
+```yaml
+sensor:
+  - platform: jacuzzi_monitor
+    current_temperature:
+      name: "Hot Tub Temperature"
+    set_temperature:
+      name: "Hot Tub Set Temperature"
+
+binary_sensor:
+  - platform: jacuzzi_monitor
+    heating:
+      name: "Hot Tub Heating"
+    pump1:
+      name: "Hot Tub Pump 1"
+```
+
+---
+
+## Key Reference Links
+- **Protocol spec:** https://github.com/ccutrer/balboa_worldwide_app/wiki
+- **Jacuzzi-specific:** https://github.com/dhmsjs/pyjacuzzi
+- **Similar project:** https://github.com/Ylianst/ESP-IQ2020
+- **Waveshare board:** https://www.waveshare.com/esp32-s3-rs485-can.htm
+
+---
+
+## Open Questions
+1. Is the actual baud rate 38400, 62500, or 67200? (Logic 8 on GPIO18 will answer this)
+2. Is the signal truly inverted at the TTL level, or is it a baud rate artifact?
+3. Does the J355 use standard Balboa `0x13` status message or J-series `0x16`?
+4. What caused the C96 error and recirc pump issue — was it our transmissions?
+5. Is the RJ45 port the topside panel bus or the accessory/ProLink bus?
