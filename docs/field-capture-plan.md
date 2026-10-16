@@ -14,24 +14,27 @@ The Logic 8 is input-only, so nothing here can put traffic on the bus.
 - Saleae Logic 8 + USB cable + lead harness + micro-hook clips
 - RJ45 screw-terminal breakout, or a patch cable you're willing to cut
 - RJ45 pass-through/splitter (in case the port also feeds the topside panel)
-- Multimeter
+- FNIRSI 2C53T (meter mode for the pre-check; saved screenshots readable over USB)
+- Phone for a close-up of U5 (IC next to the RJ45) and the small connector beside it
 
 ## Wiring
 
 | Logic 8 | RJ45 pin | Expected (from May notes — verify) |
 |---------|----------|------------------------------------|
-| CH0     | 1        | RS-232? / maybe +5 V (forum J-LXL guess) |
-| CH1     | 2        | RS-232? / maybe GND |
-| CH2     | 3        | GND |
-| CH3     | 4        | "RS-485 A" |
-| CH4     | 5        | "RS-485 B" |
-| CH5     | 6        | ? |
-| CH6     | 7        | ? |
-| CH7     | 8        | +12 V (analog clips at ±10 V; inputs are ±25 V protected) |
-| GND     | 3        | GND |
+| CH0     | 1        | "RS-232" (unverified label) |
+| CH1     | 2        | "RS-232" (unverified label) |
+| CH2     | 4        | "RS-485 A" (unverified label) |
+| CH3     | 5        | "RS-485 B" (unverified label) |
+| CH4     | 6        | ? |
+| CH5     | 7        | ? |
+| CH6     | 8        | +12 V (analog clips at ±10 V; inputs are ±25 V protected) |
+| CH7     | —        | spare |
+| GND     | 3        | GND — confirmed 2026-10-15 by continuity to a board GND test point |
 
-Channel N = pin N+1, so every pin is recorded, GND included (sanity check that it reads 0 V).
-Before clipping on, confirm pin 3 is ground and pin 8 is ≤ 12 V with the multimeter.
+Board: Jacuzzi J-300 series main board, PCB `6600-087 REV D`, PN `4PB00931D`,
+firmware chip `REV 3.61A` (photo: `board-6600-087-revD.webp`).
+
+Before clipping on, check pin 8 is ≤ 12 V and nothing exceeds ±25 V vs pin 3 (2C53T meter mode).
 
 ## Claude setup
 
