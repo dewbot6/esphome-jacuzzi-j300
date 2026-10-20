@@ -42,6 +42,11 @@ CONF_TEMP_UP = "temp_up"
 CONF_TEMP_DOWN = "temp_down"
 CONF_JETS1_BUTTON = "jets1_button"
 CONF_JETS2_BUTTON = "jets2_button"
+CONF_AUX_INPUTS = "aux_inputs"
+CONF_PIN = "pin"
+CONF_LABEL = "label"
+CONF_LEVEL = "level"
+CONF_EDGES = "edges"
 
 # Button scan positions, from captures/31-j1a-buttons.sal and 32-j1a-jets1.sal.
 SCAN_POS = {
@@ -56,6 +61,17 @@ JacuzziPanel = ns.class_("JacuzziPanel", cg.Component)
 ControlSwitch = ns.class_("ControlSwitch", switch.Switch, cg.Parented.template(JacuzziPanel))
 PressButton = ns.class_("PressButton", button.Button, cg.Parented.template(JacuzziPanel))
 
+AUX_INPUT_SCHEMA = cv.Schema(
+    {
+        cv.Required(CONF_PIN): pins.internal_gpio_input_pin_number,
+        cv.Required(CONF_LABEL): cv.string_strict,
+        cv.Optional(CONF_LEVEL): binary_sensor.binary_sensor_schema(entity_category=ENTITY_CATEGORY_DIAGNOSTIC),
+        cv.Optional(CONF_EDGES): sensor.sensor_schema(
+            accuracy_decimals=0, state_class="total_increasing", entity_category=ENTITY_CATEGORY_DIAGNOSTIC
+        ),
+    }
+)
+
 TEMP_SCHEMA = sensor.sensor_schema(
     unit_of_measurement="°F",
     accuracy_decimals=0,
@@ -68,6 +84,15 @@ def _control_always_off(config):
     # Control must come up OFF after every boot, whatever the YAML says.
     if config.get(CONF_RESTORE_MODE, "ALWAYS_OFF") != "ALWAYS_OFF":
         raise cv.Invalid("control must use restore_mode: ALWAYS_OFF")
+    return config
+
+
+def _unique_pins(config):
+    used = [config[CONF_CLOCK_PIN], config[CONF_DATA_PIN], config[CONF_REPLY_PIN]]
+    used += [a[CONF_PIN] for a in config[CONF_AUX_INPUTS]]
+    dupes = sorted({p for p in used if used.count(p) > 1})
+    if dupes:
+        raise cv.Invalid(f"GPIO used more than once: {', '.join(f'GP{p}' for p in dupes)}")
     return config
 
 
@@ -97,12 +122,14 @@ CONFIG_SCHEMA = cv.Schema(
             ),
             _control_always_off,
         ),
+        cv.Optional(CONF_AUX_INPUTS, default=[]): cv.All(cv.ensure_list(AUX_INPUT_SCHEMA), cv.Length(max=4)),
         **{
             cv.Optional(key): button.button_schema(PressButton, icon="mdi:gesture-tap")
             for key in SCAN_POS
         },
     }
 ).extend(cv.COMPONENT_SCHEMA)
+CONFIG_SCHEMA = cv.All(CONFIG_SCHEMA, _unique_pins)
 
 
 async def to_code(config):
@@ -135,6 +162,11 @@ async def to_code(config):
         sw = await switch.new_switch(config[CONF_CONTROL])
         await cg.register_parented(sw, var)
         cg.add(var.set_control_switch(sw))
+
+    for aux in config[CONF_AUX_INPUTS]:
+        level = await binary_sensor.new_binary_sensor(aux[CONF_LEVEL]) if CONF_LEVEL in aux else cg.nullptr
+        edges = await sensor.new_sensor(aux[CONF_EDGES]) if CONF_EDGES in aux else cg.nullptr
+        cg.add(var.add_aux_input(aux[CONF_PIN], aux[CONF_LABEL], level, edges))
 
     for key, pos in SCAN_POS.items():
         if key in config:

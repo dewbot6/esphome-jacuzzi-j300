@@ -11,7 +11,9 @@ J1-A numbering from [j1a-pinout.md](j1a-pinout.md). The Pico 2 W runs ESPHome
 | Button reply | 4 | S2 bottom | GP4 (through 470 Ω) | 6 | out, only while pressing |
 | Ground | 8 | S4 bottom | GND | 3 (any GND) | — |
 | +5 V | 7 | S4 top | VSYS | 39 | power in |
-| — | 1, 2, 3 | S1 top/bottom, S2 top | not connected | — | — |
+| Listen-only | 1 | S1 top | GP5 | 7 | in (never driven) |
+| Listen-only | 2 | S1 bottom | GP6 | 9 | in (never driven) |
+| Listen-only | 3 | S2 top | GP7 | 10 | in (never driven); measure first, see below |
 
 ## Why
 
@@ -26,12 +28,25 @@ J1-A numbering from [j1a-pinout.md](j1a-pinout.md). The Pico 2 W runs ESPHome
   2 V, which on the reply line would look like a held button. The firmware keeps GP4's
   input buffer disabled except while pressing.
 
+## Listen-only inputs (J1-A pins 1–3)
+
+Pins 1–3 are still unidentified (survey: pins 1 and 2 at a steady 5 V, pin 3 at 0 V). The
+firmware watches them as high-impedance inputs with no pulls, and never drives them. Each one
+reports its **level** (at most once a second) and a cumulative **edge count** (every 10 s;
+the log notes any edges). Look for changes during presses, pump/heater changes and the
+filter cycle.
+
+**Pin 3 caution (E9):** on early RP2350 silicon, an input on a line that is only *weakly*
+pulled low can drift up to ~2 V. Before connecting GP7, measure J1-A pin 3 to GND with the
+breaker off. **Under ~8 kΩ** is safe. Otherwise leave it disconnected. (Pins 1 and 2 idle high
+and aren't affected.) The boot log prints the chip's silicon revision field.
+
 ## Bring-up order
 
 1. First flash over USB on the bench, **not** connected to the tub. Updates after that go over Wi-Fi.
 2. Breaker off: measure J1-A pin 4 to GND and to +5 V, board side and panel side
-   (expect a pull-down on the board).
-3. Connect clock, data, ground and +5 V only. Verify read-only decoding against the
+   (expect a pull-down on the board), and pin 3 to GND (for the GP7 listen-only input).
+3. Connect clock, data, ground, +5 V and the listen-only pins 1–2 (and 3 if it measured OK). Verify read-only decoding against the
    Logic 8 / Waveshare. Check the panel display is unaffected.
 4. Connect GP4 (via 470 Ω). First live press: a single **+**, which only shows the set point.
    Confirm with the Logic 8 that the injected bit lands in scan position 4.

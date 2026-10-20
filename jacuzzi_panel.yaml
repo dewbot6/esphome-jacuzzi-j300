@@ -54,6 +54,27 @@ jacuzzi_panel:
     name: Panel Bus
   raw_frame:
     name: Raw Frame
+  # Listen-only inputs for the unidentified J1-A pins (never driven).
+  # Measure J1-A pin 3 to GND first (see docs/pico2w-pinout.md).
+  aux_inputs:
+    - pin: 5   # J1-A pin 1
+      label: J1-A pin 1
+      level:
+        name: J1-A Pin 1
+      edges:
+        name: J1-A Pin 1 Edges
+    - pin: 6   # J1-A pin 2
+      label: J1-A pin 2
+      level:
+        name: J1-A Pin 2
+      edges:
+        name: J1-A Pin 2 Edges
+    - pin: 7   # J1-A pin 3
+      label: J1-A pin 3
+      level:
+        name: J1-A Pin 3
+      edges:
+        name: J1-A Pin 3 Edges
   control:
     name: Control Enabled
   temp_up:

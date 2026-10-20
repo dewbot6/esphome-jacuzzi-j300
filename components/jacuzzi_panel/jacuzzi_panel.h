@@ -37,6 +37,8 @@ class JacuzziPanel : public Component {
   void set_bus_ok_sensor(binary_sensor::BinarySensor *s) { bus_ok_ = s; }
   void set_raw_frame_sensor(text_sensor::TextSensor *s) { raw_ = s; }
   void set_control_switch(switch_::Switch *s) { control_ = s; }
+  // Listen-only inputs for unidentified J1-A pins: level + edge count. Never driven.
+  void add_aux_input(uint8_t pin, const char *label, binary_sensor::BinarySensor *level, sensor::Sensor *edges);
 
   // Control. Presses are ignored unless control is enabled.
   void set_control_enabled(bool en);
@@ -46,6 +48,8 @@ class JacuzziPanel : public Component {
   void attach_bus_interrupt_();
   static void bus_isr_();
   bool ready_for_core1() const { return core1_go_; }
+  void attach_aux_interrupts_();
+  static void aux_isr_(void *arg);
 
  protected:
   static constexpr uint8_t PRESS_FRAMES = 3;        // hold a press for 3 frames (~300 ms)
@@ -58,6 +62,21 @@ class JacuzziPanel : public Component {
   void handle_frame_(uint32_t frame24, uint32_t now);
   void track_temperature_(int disp, uint32_t now);
   void release_reply_();
+  void poll_aux_(uint32_t now);
+
+  struct AuxInput {
+    uint8_t pin{0};
+    const char *label{""};
+    binary_sensor::BinarySensor *level{nullptr};
+    sensor::Sensor *edges{nullptr};
+    volatile uint32_t count{0};
+    uint32_t reported{0xFFFFFFFF};
+    int8_t last_level{-1};
+  };
+  static constexpr uint8_t MAX_AUX = 4;
+  AuxInput aux_[MAX_AUX];
+  uint8_t aux_n_{0};
+  uint32_t last_aux_ms_{0};
 
   uint8_t clock_pin_{2}, data_pin_{3}, reply_pin_{4};
   volatile bool core1_go_{false};

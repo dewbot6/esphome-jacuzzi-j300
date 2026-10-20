@@ -6,6 +6,7 @@
 #include "hardware/gpio.h"
 #include "hardware/structs/sio.h"
 #include "hardware/timer.h"
+#include "hardware/structs/sysinfo.h"
 
 #include <initializer_list>
 
@@ -36,6 +37,13 @@ void JacuzziPanel::setup() {
   gpio_set_dir(this->reply_pin_, GPIO_IN);
   gpio_set_input_enabled(this->reply_pin_, false);
 
+  // Aux (listen-only) inputs: high-impedance, no pulls.
+  for (uint8_t i = 0; i < this->aux_n_; i++) {
+    gpio_init(this->aux_[i].pin);
+    gpio_set_dir(this->aux_[i].pin, GPIO_IN);
+    gpio_disable_pulls(this->aux_[i].pin);
+  }
+
   g_clock_mask = 1u << this->clock_pin_;
   g_data_mask = 1u << this->data_pin_;
   g_reply_mask = 1u << this->reply_pin_;
@@ -48,6 +56,46 @@ void JacuzziPanel::setup() {
 
 void JacuzziPanel::attach_bus_interrupt_() {
   attachInterrupt(digitalPinToInterrupt(this->clock_pin_), JacuzziPanel::bus_isr_, CHANGE);
+}
+
+void JacuzziPanel::add_aux_input(uint8_t pin, const char *label, binary_sensor::BinarySensor *level,
+                                 sensor::Sensor *edges) {
+  if (this->aux_n_ >= MAX_AUX) return;
+  AuxInput &a = this->aux_[this->aux_n_++];
+  a.pin = pin;
+  a.label = label;
+  a.level = level;
+  a.edges = edges;
+}
+
+void JacuzziPanel::attach_aux_interrupts_() {
+  for (uint8_t i = 0; i < this->aux_n_; i++)
+    attachInterruptParam(digitalPinToInterrupt(this->aux_[i].pin), JacuzziPanel::aux_isr_, CHANGE, &this->aux_[i]);
+}
+
+// Core 1: count edges on a listen-only pin.
+void IRAM_ATTR JacuzziPanel::aux_isr_(void *arg) { static_cast<AuxInput *>(arg)->count++; }
+
+void JacuzziPanel::poll_aux_(uint32_t now) {
+  if (now - this->last_aux_ms_ < 1000) return;  // levels at most 1/s; edge counts every 10 s
+  const bool report_edges = (now / 10000) != (this->last_aux_ms_ / 10000);
+  this->last_aux_ms_ = now;
+  const uint32_t in = sio_hw->gpio_in;
+  for (uint8_t i = 0; i < this->aux_n_; i++) {
+    AuxInput &a = this->aux_[i];
+    const int8_t lvl = (in >> a.pin) & 1;
+    if (lvl != a.last_level) {
+      a.last_level = lvl;
+      if (a.level != nullptr) a.level->publish_state(lvl);
+    }
+    const uint32_t c = a.count;
+    if (report_edges && c != a.reported) {
+      if (a.reported != 0xFFFFFFFF && c != a.reported)
+        ESP_LOGI(TAG, "%s (GP%u): %u edges in last 10 s, level %d", a.label, a.pin, (unsigned) (c - a.reported), lvl);
+      a.reported = c;
+      if (a.edges != nullptr) a.edges->publish_state(c);
+    }
+  }
 }
 
 // Runs on core 1 for every clock edge.
@@ -136,6 +184,8 @@ void JacuzziPanel::loop() {
     this->q_len_--;
   }
 
+  this->poll_aux_(now);
+
   if (now - this->last_stats_ms_ >= 30000) {
     this->last_stats_ms_ = now;
     ESP_LOGD(TAG, "frames=%u bad_groups=%u timing_rejects=%u", (unsigned) seq, (unsigned) this->decoder_.bad_groups(),
@@ -208,6 +258,11 @@ void JacuzziPanel::track_temperature_(int disp, uint32_t now) {
 
 void JacuzziPanel::dump_config() {
   ESP_LOGCONFIG(TAG, "Jacuzzi J-300 panel bus (J1-A)");
+  // RP2350 silicon revision (erratum E9 affects early chips; see docs/pico2w-pinout.md).
+  ESP_LOGCONFIG(TAG, "  RP2350 chip revision field: %u",
+                (unsigned) ((sysinfo_hw->chip_id & SYSINFO_CHIP_ID_REVISION_BITS) >> SYSINFO_CHIP_ID_REVISION_LSB));
+  for (uint8_t i = 0; i < this->aux_n_; i++)
+    ESP_LOGCONFIG(TAG, "  Listen-only: %s on GP%u", this->aux_[i].label, this->aux_[i].pin);
   ESP_LOGCONFIG(TAG, "  Clock GP%u, Data GP%u, Reply GP%u (driven only while Control is on)", this->clock_pin_,
                 this->data_pin_, this->reply_pin_);
 }
@@ -222,5 +277,6 @@ void ControlSwitch::write_state(bool state) { this->parent_->set_control_enabled
 void setup1() {
   while (esphome::jacuzzi_panel::g_panel == nullptr || !esphome::jacuzzi_panel::g_panel->ready_for_core1()) delay(1);
   esphome::jacuzzi_panel::g_panel->attach_bus_interrupt_();
+  esphome::jacuzzi_panel::g_panel->attach_aux_interrupts_();
 }
 void loop1() { delay(100); }
