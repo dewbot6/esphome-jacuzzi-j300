@@ -32,7 +32,7 @@ Fill in from the continuity check (breaker off, panel unplugged) and the capture
 | 1 | S1 top | | | 5.0 V steady, idle high (button reply?) |
 | 2 | S1 bottom | | | 5.0 V steady, idle high (button reply?) |
 | 3 | S2 top | | | 0 V steady, idle low |
-| 4 | S2 bottom | | | 0 V steady, idle low |
+| 4 | S2 bottom | | | **BUTTON REPLY**: high during the scan pulse of the pressed button |
 | 5 | S3 top | | | **DATA**: 24 bits per frame, 1 bit per clock |
 | 6 | S3 bottom | | | **CLOCK** (same signal as RJ45 pin 4) |
 | 7 | S4 top | | | **+5 V** supply (5.10 V, clean) |
@@ -42,6 +42,23 @@ Survey 2026-10-20 (`captures/30-j1a-survey.sal`): reading DATA at each clock pul
 24 bits whose bits 2–24 equal the timing-decoded slots 1–23 exactly; bit 1 (the hidden
 first bit) is 1. No strobe line on J1-A. Pins 1–4 are static during the 7-pulse button scan
 with no buttons pressed.
+
+Buttons 2026-10-20 (`captures/31-j1a-buttons.sal`): pin 4 is the button reply line.
+During the 7 wide clock pulses (the button scan), it is high in the pressed button's
+position, for each scan while the button is held:
+
+| Scan position | Button |
+|---|---|
+| 1 | ? |
+| 2 | Jets 2 |
+| 3 | − |
+| 4 | + |
+| 5 | ? |
+| 6 | ? |
+| 7 | Jets 1 |
+
+Open questions: at 9.9 s both jets came on with no scan bit seen, and the Light press
+showed no scan bit at all.
 
 Originally expected among them: ground (= RJ45 3), clock (= RJ45 4), strobe (= RJ45 5), the
 display data line, the button reply line, and panel power.
