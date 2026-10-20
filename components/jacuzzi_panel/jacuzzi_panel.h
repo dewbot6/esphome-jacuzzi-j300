@@ -92,7 +92,7 @@ class JacuzziPanel : public Component {
   uint32_t press_done_ms_{0};
   bool press_in_flight_{false};
 
-  // Display tracking (same rules as components/jacuzzi_monitor).
+  // Display tracking (same rules as rj45/components/jacuzzi_monitor).
   int disp_{-1}, prev_val_{-1}, water_val_{-1}, set_val_{-1};
   uint32_t disp_since_{0}, prev_held_{0};
   bool settled_{false};

@@ -1,4 +1,4 @@
-> **Historical (2026-10-16).** The plan for the first Logic 8 session. The results are in `docs/protocol.md`. The wiring table's "expected" labels were disproved.
+> **Historical (2026-10-16).** The plan for the first Logic 8 session. The results are in `rj45/docs/rj45-timing-decode.md`. The wiring table's "expected" labels were disproved.
 
 # Field capture plan — Saleae Logic 8 on the RJ45 diagnostic port
 

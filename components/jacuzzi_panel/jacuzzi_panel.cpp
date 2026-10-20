@@ -199,7 +199,7 @@ void JacuzziPanel::handle_frame_(uint32_t frame24, uint32_t now) {
   this->last_frame_ = frame24;
   if (!confirmed) return;
 
-  const uint32_t s = frame24 & 0x7FFFFF;  // slots 1..23; slot k at bit 23-k (as jacuzzi_monitor)
+  const uint32_t s = frame24 & 0x7FFFFF;  // slots 1..23; slot k at bit 23-k (as rj45/components/jacuzzi_monitor)
   if (frame24 != this->published_) {
     const bool first = this->published_ == 0xFFFFFFFF;
     const uint32_t changed = first ? 0xFFFFFFFF : (frame24 ^ this->published_);

@@ -127,7 +127,7 @@ done:
   // slot k-1 is 0. Between two observed pulses j < m the gap is 17 + 15*n us, with
   // slots j..m-2 = 1 and slot m-1 = 0. Walk back from the first wide pulse, which
   // follows pulse 24 by 17 us (call it pulse 25). On the Logic 8 (unloaded line) every
-  // pulse is present; see docs/protocol.md.
+  // pulse is present; see rj45/docs/rj45-timing-decode.md.
   bits = 0;
   int m = 25;
   for (size_t i = w0; i > first_short && m > 1; i--) {

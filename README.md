@@ -1,109 +1,88 @@
 # Jacuzzi J355 → Home Assistant
 
-A **listen-only** ESPHome monitor for a Jacuzzi J355 hot tub (J-300 series main board,
-PCB `6600-087 REV D`, firmware `REV 3.61A`). It plugs into the RJ45 port on the main
-board and reports the tub's state to Home Assistant. It never transmits anything to the tub.
+ESPHome firmware for a Jacuzzi J355 hot tub (J-300 series main board, PCB `6600-087 REV D`,
+firmware `REV 3.61A`). A **Raspberry Pi Pico 2 W** taps the topside panel connector
+**J1-A**, reads the panel bus directly, and can press panel buttons from Home Assistant,
+but only while its **Control Enabled** switch is on.
+
+> **Status:** compiled and tested offline against Logic 8 captures. **Not yet run on
+> hardware.** A working read-only backup on the RJ45 port lives in [`rj45/`](rj45/README.md).
 
 ## What shows up in Home Assistant
 
 | Entity | What it is |
 |---|---|
 | **Water Temperature** | °F, as shown on the topside display |
-| **Set Temperature** | °F. The tub only sends it while the set point is on the display, so it updates a few seconds after someone presses + or −. Unknown after a reboot until the next press. |
+| **Set Temperature** | °F. The tub only shows it after + or −, so it updates a few seconds after a press. Unknown after a reboot until the next press. |
 | **Heater** | On when the heater is running (the red dot on the panel) |
 | **Jets 1**, **Jets 2** | On/off |
-| Display | Diagnostic: the number currently on the panel |
-| Status Slot 5 | Diagnostic: an unidentified status bit (maybe the circulation pump) |
-| Raw Frame | Diagnostic: the 23 decoded bits |
+| **Control Enabled** | Off at every boot. Must be on for the buttons below to do anything. |
+| **Temp Up**, **Temp Down**, **Jets 1 Button**, **Jets 2 Button** | Press the panel button |
+| Display, Status Slot 5, Panel Bus, Raw Frame | Diagnostics |
+| J1-A Pin 1/2/3 (+ Edges) | Diagnostics: listen-only watch on the unidentified pins |
 
-**Not available:** the light (on/off and color). The lights have their own cable from the topside panel and never touch this bus. **Control**
-(changing the set point, jets or light from HA) isn't implemented. See [Next steps](#next-steps).
+**Not available:** the light (on/off and color). The lights have their own cable from the
+topside panel and never appear on this bus.
 
 ## Hardware
 
-- **Waveshare ESP32-S3-RS485-CAN**. Its isolated RS-485 receiver is used as a safe
-  level shifter.
-- An RJ45 screw-terminal breakout on the main board's RJ45 port.
-- USB power for the Waveshare.
+- Raspberry Pi Pico 2 W (headers pre-soldered) on a screw-terminal breakout
+- A tap on J1-A that leaves the panel connected (2-pin PC front-panel Y-splitters + a 2×4
+  male-male header block for the panel plug)
+- 470 Ω resistor in the reply line (clamped in the screw terminal, no solder)
 
-### Wiring
-
-| Waveshare RS-485 terminal | RJ45 pin | Signal |
-|---|---|---|
-| **A+** | **3** | ground |
-| **B−** | **4** | panel bus clock |
-| GND | 3 | ground |
-
-- The A/B order matters. A+ on pin 4 doesn't work.
-- Leave the Waveshare's **120R termination jumper off**.
-- Don't connect anything else. RJ45 pin 5 is the bus strobe and must not be driven:
-  transmitting on these lines once caused a **C96 error** and a stuck recirc pump.
+Wiring, safety rules and the bring-up order: **[docs/pico2w-pinout.md](docs/pico2w-pinout.md)**.
+Connector numbering: [docs/j1a-pinout.md](docs/j1a-pinout.md).
 
 ## Flashing
 
 1. Install ESPHome (`pip install esphome`) or use the ESPHome add-on / Builder.
-2. `cp secrets.example.yaml secrets.yaml` and fill in Wi-Fi, OTA password and an API
-   encryption key (generate one with `openssl rand -base64 32`).
-3. First flash over USB: `esphome run jacuzzi_monitor.yaml --device /dev/cu.usbmodem…`
-4. Later updates can go over Wi-Fi: `esphome run jacuzzi_monitor.yaml`
+2. `cp secrets.example.yaml secrets.yaml` and fill in Wi-Fi, OTA password and the API
+   encryption keys (generate each with `openssl rand -base64 32`).
+3. First flash over USB, on the bench, **not connected to the tub**:
+   `esphome run jacuzzi_panel.yaml --device /dev/cu.usbmodem…`
+4. Later updates over Wi-Fi: `esphome run jacuzzi_panel.yaml`
 
-## Adding it to Home Assistant
-
-**Settings → Devices & services.** "Jacuzzi J355 Monitor" appears under *Discovered*.
-Click **Add** and paste the `api_encryption_key` from `secrets.yaml`. If it isn't
-discovered, use **Add Integration → ESPHome** with host `jacuzzi-monitor.local` and port 6053.
+In Home Assistant, **Settings → Devices & services** discovers "Jacuzzi J355 Panel". Paste
+`panel_api_encryption_key` from `secrets.yaml`.
 
 ## How it works
 
-The main board drives the topside panel with a bit-banged clock/strobe/data bus that
-repeats every 100 ms. The data line isn't on the RJ45, but the board's processor takes
-2 µs less to send a 1 than a 0. So each bit shows up as the gap between clock pulses:
-**15 µs = 1, 17 µs = 0**. The ESP32 times the clock with its RMT peripheral and
-rebuilds the frame: heater, jets, and three BCD digits of the display.
+Every 100 ms the main board clocks 24 data bits to the panel: the heater, both jets and three
+BCD display digits. Then it runs a 7-pulse button scan, during which the panel raises the reply
+line in the pressed button's slot. The Pico samples DATA on each clock edge, in an interrupt
+on its second core, away from Wi-Fi. To press a button it drives the reply line only during
+that button's scan pulse, and only if the clock timing matches exactly. Otherwise it doesn't
+press at all.
 
-Full details: [docs/protocol.md](docs/protocol.md). That includes the slot map and the
-odd ways the clock looks through the RS-485 receiver.
+Full protocol: **[docs/protocol.md](docs/protocol.md)**.
 
 ## Repository layout
 
 | Path | Contents |
 |---|---|
-| `jacuzzi_monitor.yaml` | ESPHome device config |
-| `components/jacuzzi_monitor/` | The decoder (C++ external component) |
-| `docs/protocol.md` | Decoded protocol, slot map, wiring notes |
-| `docs/*.webp`, `docs/scope/` | Board photos and early oscilloscope shots |
-| `captures/*.sal` | Saleae Logic 8 captures from the RJ45 port (open in Saleae Logic 2) |
-| `tools/` | Capture and analysis scripts (see below) |
+| `jacuzzi_panel.yaml` | ESPHome config for the Pico 2 W |
+| `components/jacuzzi_panel/` | The firmware component. `panel_decoder.h` is platform-free bus logic. |
+| `docs/protocol.md`, `docs/j1a-pinout.md`, `docs/pico2w-pinout.md` | Protocol, connector numbering, Pico wiring and bring-up |
+| `docs/*.webp` | Board photos |
+| `captures/*.sal` | Logic 8 captures on J1-A (open in Saleae Logic 2) |
+| `tools/` | Capture and test tools (below) |
+| `rj45/` | **Backup method:** read-only Waveshare ESP32 on the RJ45 port (working, deployed) |
 | `docs/history/` | Earlier notes, kept for reference. Some of their conclusions turned out wrong. |
 
 ### Tools
 
-Analysis scripts need Python 3 and `numpy` (`pip install -r tools/requirements.txt`).
-To use them on a `.sal` capture, export it from Saleae Logic 2 to `digital.csv` first
-(File → Export Raw Data).
-
 - `tools/saleae.py`: drives a Logic 8 through Saleae Logic 2's built-in MCP server
-  (127.0.0.1:10530) to record and export captures.
-- `tools/slots.py <digital.csv>`: decodes each frame's bits from a Logic 8 capture.
-- `tools/sim_receiver.py <digital.csv>`: replays a capture the way the Waveshare sees
-  it, through the same decoder and set-point logic as the firmware.
-- `tools/frames.py`: raw per-frame timing dump.
+  (127.0.0.1:10530) to record and export captures into `captures/`.
+- `tools/j1a_buttons.py <digital.csv>`: decodes data bits and button-scan bits from a J1-A capture.
+- `tools/test_panel_decoder.cpp`: replays a J1-A capture through the firmware's decoder,
+  including simulated presses and dropped edges (see docs/pico2w-pinout.md).
 
-## Second device: Pico 2 W on the panel connector (in progress)
-
-`jacuzzi_panel.yaml` targets a Raspberry Pi Pico 2 W wired to the topside panel connector
-J1-A. It reads the bus directly, and can press **+ / − / Jets 1 / Jets 2** from Home
-Assistant, only while its **Control Enabled** switch is on. See
-[docs/pico2w-pinout.md](docs/pico2w-pinout.md) for wiring, safety rules and bring-up.
-Compiled and tested offline against captures. Not yet run on hardware.
+Python tools need `numpy` (`pip install -r tools/requirements.txt`). Export a `.sal` to
+`digital.csv` from Saleae Logic 2 first (File → Export Raw Data).
 
 ## Next steps
 
-- **Identify slot 5.** It flipped from 1 to 0 on 2026-10-16 and stayed there. Watching
-  the HA entity alongside the circulation pump should tell.
-- **Sniff the topside panel connector (J1-A)** with the Logic 8, listen-only, to see
-  the real data line and the button-reply line during the 7-pulse button scan.
-- **Control**, if wanted. The safest route is optocouplers across the topside panel's
-  buttons, driven by the ESP. Since the display is decoded, set-point changes can be
-  confirmed. Another option is a cautious test of RJ45 pins 1/6, which look like unused
-  inputs, through a 10 kΩ resistor.
+- Bring up the Pico on the tub (docs/pico2w-pinout.md), including the first **+** press test.
+- Identify **slot 5** and **J1-A pins 1–3** using the diagnostic entities.
+- Power monitoring (parked): CircuitSetup Split Single Phase Energy Meter with 2 clamps on L1/L2.

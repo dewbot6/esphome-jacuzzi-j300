@@ -44,8 +44,9 @@ output:
     pin: GPIO21
     id: rs485_de_re
 
-# Isolated RS-485 receiver used as a level shifter: A+ = RJ45 pin 4 (clock),
-# B- = RJ45 pin 3 (ground). Its RX output is GPIO18. Nothing is ever transmitted.
+# BACKUP METHOD (main method: ../jacuzzi_panel.yaml on J1-A). See rj45/README.md.
+# Isolated RS-485 receiver used as a level shifter: A+ = RJ45 pin 3 (ground),
+# B- = RJ45 pin 4 (clock), GND = pin 3. Its RX output is GPIO18. Nothing is ever transmitted.
 jacuzzi_monitor:
   clock_pin: GPIO18
   water_temperature:

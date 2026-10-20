@@ -20,7 +20,7 @@ Board facing you, `PN: 4PB00931D` text upright (U5 to the left of J1-A, RJ45 to 
 
 - Pin = 2·column − 1 (top row) or 2·column (bottom row).
 - Tap splitter **S1–S4 = column C1–C4** (each 1×2 female plug spans one column).
-- **Logic 8 channel = pin − 1** (CH0 = pin 1 … CH7 = pin 8). Ground clip on RJ45 pin 3.
+- **Logic 8 channel = pin − 1** (CH0 = pin 1 … CH7 = pin 8). Ground clip on J1-A pin 8 (or RJ45 pin 3, the same ground).
 - Mark pin 1 on the board and the matching corner of the panel plug before unplugging.
 
 ## Findings

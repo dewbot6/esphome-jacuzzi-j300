@@ -3,7 +3,7 @@
 The J-300 main board bit-bangs the topside panel bus. The data line is not on
 the RJ45, but each bit leaks through the clock (RJ45 pin 4) timing: 15 us
 between short clock pulses = 1, 17 us = 0. This component times the clock with
-the ESP32 RMT peripheral and decodes the 23 visible slots. See docs/protocol.md.
+the ESP32 RMT peripheral and decodes the 23 visible slots. See rj45/docs/rj45-timing-decode.md.
 """
 
 import esphome.codegen as cg

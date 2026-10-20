@@ -16,7 +16,7 @@ namespace esphome {
 namespace jacuzzi_monitor {
 
 // Passive decoder for the J-300 panel bus clock on RJ45 pin 4. Receive only:
-// nothing in this component ever drives a pin. See docs/protocol.md.
+// nothing in this component ever drives a pin. See rj45/docs/rj45-timing-decode.md.
 class JacuzziMonitor : public Component {
  public:
   void setup() override;
