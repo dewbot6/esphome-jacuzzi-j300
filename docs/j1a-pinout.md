@@ -29,14 +29,19 @@ Fill in from the continuity check (breaker off, panel unplugged) and the capture
 
 | J1-A pin | Splitter | Wire color | Continuity to RJ45 pin | Signal |
 |---|---|---|---|---|
-| 1 | S1 top | | | |
-| 2 | S1 bottom | | | |
-| 3 | S2 top | | | |
-| 4 | S2 bottom | | | |
-| 5 | S3 top | | | |
-| 6 | S3 bottom | | | |
-| 7 | S4 top | | | |
+| 1 | S1 top | | | 5.0 V steady, idle high (button reply?) |
+| 2 | S1 bottom | | | 5.0 V steady, idle high (button reply?) |
+| 3 | S2 top | | | 0 V steady, idle low |
+| 4 | S2 bottom | | | 0 V steady, idle low |
+| 5 | S3 top | | | **DATA**: 24 bits per frame, 1 bit per clock |
+| 6 | S3 bottom | | | **CLOCK** (same signal as RJ45 pin 4) |
+| 7 | S4 top | | | **+5 V** supply (5.10 V, clean) |
 | 8 | S4 bottom | | 3 (GND) | **Ground** |
 
-Expected among them: ground (= RJ45 3), clock (= RJ45 4), strobe (= RJ45 5), the
+Survey 2026-10-20 (`captures/30-j1a-survey.sal`): reading DATA at each clock pulse gives
+24 bits whose bits 2–24 equal the timing-decoded slots 1–23 exactly; bit 1 (the hidden
+first bit) is 1. No strobe line on J1-A. Pins 1–4 are static during the 7-pulse button scan
+with no buttons pressed.
+
+Originally expected among them: ground (= RJ45 3), clock (= RJ45 4), strobe (= RJ45 5), the
 display data line, the button reply line, and panel power.
