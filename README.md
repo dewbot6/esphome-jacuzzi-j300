@@ -89,6 +89,14 @@ To use them on a `.sal` capture, export it from Saleae Logic 2 to `digital.csv` 
   it, through the same decoder and set-point logic as the firmware.
 - `tools/frames.py`: raw per-frame timing dump.
 
+## Second device: Pico 2 W on the panel connector (in progress)
+
+`jacuzzi_panel.yaml` targets a Raspberry Pi Pico 2 W wired to the topside panel connector
+J1-A. It reads the bus directly, and can press **+ / − / Jets 1 / Jets 2** from Home
+Assistant, only while its **Control Enabled** switch is on. See
+[docs/pico2w-pinout.md](docs/pico2w-pinout.md) for wiring, safety rules and bring-up.
+Compiled and tested offline against captures. Not yet run on hardware.
+
 ## Next steps
 
 - **Identify slot 5.** It flipped from 1 to 0 on 2026-10-16 and stayed there. Watching

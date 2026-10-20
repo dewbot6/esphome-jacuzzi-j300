@@ -1,0 +1,66 @@
+# Raspberry Pi Pico 2 W on the topside panel connector (J1-A): reads the panel bus
+# directly and can press panel buttons. Wiring: docs/pico2w-pinout.md.
+# Control is OFF after every boot; turn on "Control Enabled" to allow presses.
+esphome:
+  name: jacuzzi-panel
+  friendly_name: Jacuzzi J355 Panel
+
+external_components:
+  - source:
+      type: local
+      path: components
+    components: [jacuzzi_panel]
+
+rp2:
+  board: rpipico2w
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "Jacuzzi-Panel-AP"
+    password: !secret ap_password
+
+logger:
+  level: DEBUG
+
+api:
+  encryption:
+    key: !secret panel_api_encryption_key
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+jacuzzi_panel:
+  clock_pin: 2   # J1-A pin 6
+  data_pin: 3    # J1-A pin 5
+  reply_pin: 4   # J1-A pin 4 (via 470 ohm)
+  water_temperature:
+    name: Water Temperature
+  set_temperature:
+    name: Set Temperature
+  display_temperature:
+    name: Display
+  heater:
+    name: Heater
+  jets1:
+    name: Jets 1
+  jets2:
+    name: Jets 2
+  slot5:
+    name: Status Slot 5
+  bus_ok:
+    name: Panel Bus
+  raw_frame:
+    name: Raw Frame
+  control:
+    name: Control Enabled
+  temp_up:
+    name: Temp Up
+  temp_down:
+    name: Temp Down
+  jets1_button:
+    name: Jets 1 Button
+  jets2_button:
+    name: Jets 2 Button
