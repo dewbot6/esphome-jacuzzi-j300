@@ -36,7 +36,7 @@ Fill in from the continuity check (breaker off, panel unplugged) and the capture
 | 5 | S3 top | | | |
 | 6 | S3 bottom | | | |
 | 7 | S4 top | | | |
-| 8 | S4 bottom | | | |
+| 8 | S4 bottom | | 3 (GND) | **Ground** |
 
 Expected among them: ground (= RJ45 3), clock (= RJ45 4), strobe (= RJ45 5), the
 display data line, the button reply line, and panel power.
