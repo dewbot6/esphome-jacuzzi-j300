@@ -1,5 +1,8 @@
 # Raspberry Pi Pico 2 W ↔ J1-A (read + control)
 
+> For the hands-on, step-by-step version (parts, building the tap, flashing, tests), see
+> **[SETUP.md](SETUP.md)**. This page is the technical reference.
+
 Planned hardware for reading the panel bus directly and pressing buttons. Uses the
 J1-A numbering from [j1a-pinout.md](j1a-pinout.md). The Pico 2 W runs ESPHome
 (`rp2` platform, `board: rpipico2w`).

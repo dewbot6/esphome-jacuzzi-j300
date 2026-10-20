@@ -8,6 +8,9 @@ but only while its **Control Enabled** switch is on.
 > **Status:** compiled and tested offline against Logic 8 captures. **Not yet run on
 > hardware.** A working read-only backup on the RJ45 port lives in [`rj45/`](rj45/README.md).
 
+**➜ To build, wire and flash it, follow [docs/SETUP.md](docs/SETUP.md)** (step-by-step, with a
+[wiring diagram](docs/wiring.svg)). Using Claude Code? [`CLAUDE.md`](CLAUDE.md) gives it the context and safety rules.
+
 ## What shows up in Home Assistant
 
 | Entity | What it is |
@@ -31,7 +34,8 @@ topside panel and never appear on this bus.
   male-male header block for the panel plug)
 - 470 Ω resistor in the reply line (clamped in the screw terminal, no solder)
 
-Wiring, safety rules and the bring-up order: **[docs/pico2w-pinout.md](docs/pico2w-pinout.md)**.
+Step-by-step build and bring-up: **[docs/SETUP.md](docs/SETUP.md)**. Pin-level details:
+[docs/pico2w-pinout.md](docs/pico2w-pinout.md).
 Connector numbering: [docs/j1a-pinout.md](docs/j1a-pinout.md).
 
 ## Flashing

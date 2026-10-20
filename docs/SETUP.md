@@ -1,0 +1,210 @@
+# Setup guide: Pico 2 W on the topside panel connector (J1-A)
+
+Step-by-step instructions to build the tap, wire the Raspberry Pi Pico 2 W, flash it, add it
+to Home Assistant and bring up button control safely. Written to be followed by someone at
+the tub, with Claude Code helping (see [`CLAUDE.md`](../CLAUDE.md)).
+
+> **Status:** the firmware compiles and passes offline tests against real recordings of
+> the bus, but this is its **first hardware bring-up**. Follow the order below. Each stage
+> checks the previous one before anything is ever driven onto the bus.
+
+![Wiring diagram](wiring.svg)
+
+---
+
+## 0. Safety: read first
+
+- The equipment bay holds **240 V** (relays, heater, pumps). **Switch the hot tub off at the
+  main house panel** before opening it or touching anything inside. The spa's own GFCI
+  disconnect isn't enough while you have the bay open.
+- Only ever touch the low-voltage connector **J1-A** (and the RJ45 next to it). Don't reach
+  past the board toward the relays or the big terminals.
+- Signals on J1-A are 5 V. Nothing here needs mains wiring.
+- **Never connect the Pico's USB cable while it is wired to the tub.** Flash it on the bench
+  first; after that, updates and logs go over Wi-Fi.
+- The Pico **only listens** until step 7. Even then, it only presses a button while the
+  **Control Enabled** switch in Home Assistant is on (it is off after every reboot).
+
+---
+
+## 1. Parts
+
+| Part | Qty | Example |
+|---|---|---|
+| Raspberry Pi Pico 2 W, **headers pre-soldered** | 1 | [Waveshare Pico 2 W pre-soldered](https://www.amazon.com/waveshare-Pre-Soldered-Raspberry-Microcontroller-Bluetooth/dp/B0DQ7NHGH8) |
+| Screw-terminal breakout for Pico (must list Pico 2 support) | 1 | [Freenove Pico breakout](https://www.amazon.com/clp/B0BFB53Y2N) |
+| 2-pin Y-splitter, **1 female → 2 female**, 2.54 mm (PC front-panel type) | 4 | [GELRHONR F→2F 10-pack](https://www.amazon.com/dp/B0DSZWFS1V) |
+| 2.54 mm **double-row male header, equal-length pins on both sides** | 1 strip | [2×40 long-pin header](https://www.amazon.com/Break-away-Headers-2-54mm-Length-Centered/dp/B07842GC5F) |
+| Male-to-male Dupont jumper wires | 8 | [ELEGOO jumper kit](https://www.amazon.com/Elegoo-EL-CP-004-Multicolored-Breadboard-arduino/dp/B01EV70C78) |
+| 470 Ω resistor (1/4 W) | 1 | any |
+| Micro-USB data cable (for the first flash only) | 1 | any |
+| Multimeter (the FNIRSI 2C53T works) | 1 | |
+| Fine marker / paint pen, masking tape, small zip ties | | |
+
+Snap a **2×4 piece** off the male header strip (2 rows × 4 pins).
+
+---
+
+## 2. J1-A and the numbering we use
+
+J1-A is the shrouded 2×4 pin header on the main board, just left of the RJ45 jack. The
+panel cable plugs into it. With the board facing you and the `PN: 4PB00931D` text upright:
+
+```
+              board top edge
+          ┌────┬────┬────┬────┐
+  top row │ 1  │ 3  │ 5  │ 7  │
+          ├────┼────┼────┼────┤      ← RJ45 jack is off to this side
+  bot row │ 2  │ 4  │ 6  │ 8  │
+          └────┴────┴────┴────┘
+   column:  C1   C2   C3   C4
+```
+
+| J1-A pin | Signal | Goes to Pico |
+|---|---|---|
+| 1 | unknown (steady 5 V) | GP5 (listen only) |
+| 2 | unknown (steady 5 V) | GP6 (listen only) |
+| 3 | unknown (steady 0 V) | GP7 (listen only, **only if step 4 says OK**) |
+| 4 | button reply | GP4 **through 470 Ω** (step 7 only) |
+| 5 | data | GP3 |
+| 6 | clock | GP2 |
+| 7 | +5 V | VSYS (powers the Pico) |
+| 8 | ground | GND |
+
+Details: [j1a-pinout.md](j1a-pinout.md), [protocol.md](protocol.md).
+
+---
+
+## 3. Build and label the tap (at the table)
+
+Each Y-splitter handles **one column** (two pins) of J1-A. Call them **S1–S4** for columns C1–C4.
+
+1. **Label the splitters.** On each splitter put a tape flag: `S1` … `S4`. On each of its
+   three plugs, make a **dot on the side that will face the top row** (pins 1/3/5/7). Do it
+   the same way on all three plugs of a splitter, so "dot side = top row" is true at every end.
+2. **Make the panel-side block.** Take the 2×4 male-male piece. Plug the **first tail** of
+   S1, S2, S3, S4 onto one side of it, left to right, dots toward the same long edge (that
+   edge = top row). Wrap with tape so they can't shift. Mark that edge "TOP".
+3. **Second tails → jumpers.** Push a male-male jumper into each pin of each splitter's
+   **second tail** (8 jumpers). Tag each jumper with its J1-A pin number (1–8) using the
+   table above: S*n* dot side = pin 2*n*−1, other side = pin 2*n*.
+
+---
+
+## 4. Measure (breaker OFF at the main panel)
+
+1. Open the bay. **Before unplugging anything, put a paint dot on the panel plug and a
+   matching dot on the board next to J1-A pin 1** (top-left, column C1) so the plug can
+   always go back the same way.
+2. Unplug the panel plug from J1-A.
+3. With the multimeter on **resistance (Ω)**, black lead on **pin 8**, measure on the
+   **board's** pins and write the results in [j1a-pinout.md](j1a-pinout.md) (or tell Claude):
+
+   | Measure | Result | Why |
+   |---|---|---|
+   | pin 4 → pin 8 (GND) | ____ Ω | reply line pull-down. Needed before control |
+   | pin 4 → pin 7 (+5 V) | ____ Ω | |
+   | pin 3 → pin 8 (GND) | ____ Ω | **under ~8 kΩ: OK to connect GP7. Otherwise leave pin 3 unconnected** |
+   | pin 8 → board GND test point | ~0 Ω | confirms ground |
+
+4. Plug the **panel plug back** directly (dot to dot) for now. Close the bay. The tub
+   should work exactly as before.
+
+---
+
+## 5. Flash the Pico (on the bench, NOT connected to the tub)
+
+1. **Install ESPHome** on the computer (Claude can do this):
+   `python3 -m venv ~/esphome-venv && ~/esphome-venv/bin/pip install esphome`
+2. **Secrets.** In the repo folder: `cp secrets.example.yaml secrets.yaml`, then fill in the
+   Wi-Fi name and password for the house, and generate keys with
+   `openssl rand -base64 32` for `api_encryption_key` and `panel_api_encryption_key`, plus any
+   `ota_password` and `ap_password`. Keep this file private; it's ignored by git.
+3. **Put the Pico in BOOTSEL mode:** hold the **BOOTSEL** button on the Pico, plug in the
+   USB cable, then release. It appears as a USB drive (`RP2350`).
+4. **Flash:** `~/esphome-venv/bin/esphome run jacuzzi_panel.yaml`
+   (If that can't find the Pico, run `esphome compile jacuzzi_panel.yaml` and drag
+   `.esphome/build/jacuzzi-panel/.pioenvs/jacuzzi-panel/firmware.uf2` onto the `RP2350` drive.)
+5. **Check it joined Wi-Fi:** `~/esphome-venv/bin/esphome logs jacuzzi_panel.yaml`.
+   At this point, with no tub, expect *"Panel Bus"* to be off. That's correct.
+   Note the line `RP2350 chip revision field: N` (tells us whether erratum E9 applies).
+6. Unplug USB. Put the Pico on the screw-terminal breakout.
+
+---
+
+## 6. Wire it up: listen only (breaker OFF at the main panel)
+
+1. Breaker off. Unplug the panel plug from J1-A.
+2. Push the **four single female ends** of S1–S4 onto J1-A: **S1 on column C1** (nearest the
+   U5 chip) … **S4 on column C4** (nearest the RJ45), **dots toward the top row**.
+3. Push the **panel plug onto the 2×4 block**, its paint dot at the C1/TOP corner. Tape and
+   zip-tie so it can't pull off.
+4. Connect jumpers to the breakout's screw terminals, using the **GPIO labels on the breakout**:
+
+   | Jumper (J1-A pin) | Breakout terminal |
+   |---|---|
+   | 8 (ground) | **GND** |
+   | 7 (+5 V) | **VSYS** |
+   | 6 (clock) | **GP2** |
+   | 5 (data) | **GP3** |
+   | 1 | **GP5** |
+   | 2 | **GP6** |
+   | 3 | **GP7**: *only if pin 3 measured under ~8 kΩ*. Otherwise tape it off |
+   | 4 (reply) | **leave unconnected for now**. Tape the end |
+
+5. Double-check every jumper against the table. Make sure no bare metal touches anything.
+6. Close the bay, **breaker on**. The panel display should come up normally.
+
+**Check (with Claude, over Wi-Fi):** `esphome logs jacuzzi_panel.yaml`
+- `Panel Bus` turns on; lines like `frame 1000…  heater=… jets1=… jets2=…` appear.
+- `water NN` matches the number on the panel.
+- Press **Jets 1** on the panel: `jets1=1` appears; press again → `0`. Same for Jets 2.
+- Press **+** twice (the first press only shows the set point): about 5 s after the display
+  goes back to the water temperature, `set point NN` is logged. Press **−** to put it back.
+- In Home Assistant (**Settings → Devices & services**, add "Jacuzzi J355 Panel" with
+  `panel_api_encryption_key`), the entities match what the panel shows.
+
+If anything looks wrong, stop here. See *Troubleshooting*.
+
+---
+
+## 7. Connect the reply line and test control (breaker OFF to wire)
+
+Only after step 6 works, and with the pin 4 measurements from step 4 recorded.
+
+1. Breaker off. Clamp the **470 Ω resistor** in the **GP4** terminal; connect the **pin 4
+   jumper** to the resistor's other leg (a second terminal or a tight twist, no solder),
+   so the path is `J1-A pin 4 → jumper → 470 Ω → GP4`. Breaker on.
+2. In Home Assistant, turn on **Control Enabled**. (It refuses if the bus isn't being received.)
+3. **First press: Temp Up, once.** The first + press only *shows* the set point, so this is
+   harmless. Expect the panel display to switch to the set point for ~3 s, and the log to
+   show `Pressing scan pos 4`.
+   - **Display didn't react:** turn Control off. The tub's processor may not accept the Pico's
+     3.3 V output. Stop and report (see *Troubleshooting*).
+4. **Jets 2 Button** → Jets 2 should start; press again → stop.
+5. **Temp Up** twice, watch the set point go up by 1. **Temp Down** to put it back.
+6. Turn **Control Enabled** off when you're done testing. It also goes off by itself
+   after any reboot, or if the bus is lost for 2 s.
+
+---
+
+## Troubleshooting
+
+| Symptom | Likely cause / what to try |
+|---|---|
+| Panel display blank or odd after wiring | Breaker off. Check the panel plug is on the 2×4 block the right way round (dots at C1/TOP) and that S1–S4 are in the right columns. If in doubt, plug the panel straight back into J1-A. |
+| `Panel Bus` off, no `frame` lines | Clock/data swapped (GP2 = pin 6, GP3 = pin 5), missing GND, or a splitter on the wrong column. |
+| Frames appear but values are nonsense | A splitter is flipped (dot facing the wrong row) or columns are out of order. |
+| Pico doesn't power up at the tub | VSYS jumper not on pin 7 (S4 dot side), or GND not on pin 8. |
+| `set point` never appears | Normal until someone presses + or −; the set point is only sent while it's displayed. |
+| Control won't turn on | Bus not received (fix that first); it's a safety interlock. |
+| Press logged but display doesn't react | Reply wiring (pin 4 → 470 Ω → GP4), or the 3.3 V high isn't enough for the tub's processor. Report it; don't try to "boost" it. |
+| C-code error on the panel (e.g. C96) | Breaker off, unplug the Pico tap, plug the panel straight into J1-A, then power on. Report what was happening. |
+
+## Undo everything
+
+Breaker off → unplug the four splitters from J1-A → plug the panel plug straight back onto
+J1-A (paint dot to paint dot) → breaker on. The tub is back to stock.
+
+The read-only **RJ45 backup** (Waveshare, [`rj45/`](../rj45/README.md)) is separate and can stay
+connected throughout.
