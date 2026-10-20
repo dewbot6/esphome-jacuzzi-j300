@@ -16,7 +16,7 @@ board and reports the tub's state to Home Assistant. It never transmits anything
 | Status Slot 5 | Diagnostic: an unidentified status bit (maybe the circulation pump) |
 | Raw Frame | Diagnostic: the 23 decoded bits |
 
-**Not available:** the light (on/off and color) isn't sent on this bus. **Control**
+**Not available:** the light (on/off and color). The lights have their own cable from the topside panel and never touch this bus. **Control**
 (changing the set point, jets or light from HA) isn't implemented. See [Next steps](#next-steps).
 
 ## Hardware

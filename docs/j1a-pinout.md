@@ -57,8 +57,15 @@ position, for each scan while the button is held:
 | 6 | ? |
 | 7 | Jets 1 |
 
-Open questions: at 9.9 s both jets came on with no scan bit seen, and the Light press
-showed no scan bit at all.
+Single presses (`captures/32-j1a-jets1.sal`, `33-j1a-light.sal`): Jets 1 = position 7,
+and its flag follows 0.2 s later as the relay clicks. **Light** (plain bulb) toggles the light but
+leaves no trace on any J1-A pin, in either the frame scan or the 1 s header scan. The
+lights run on their own ribbon cable from the topside panel, separate from this
+8-pin connector. That is why light state and color never appear on the bus. Positions
+1, 5, 6 were not seen used.
+
+In `31-j1a-buttons.sal` both jets came on at 9.9 s with no scan bit; probably two
+quick taps between 100 ms scans. Single presses always showed their bit.
 
 Originally expected among them: ground (= RJ45 3), clock (= RJ45 4), strobe (= RJ45 5), the
 display data line, the button reply line, and panel power.
