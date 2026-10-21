@@ -27,6 +27,9 @@ class JacuzziPanel : public Component {
   float get_setup_priority() const override { return setup_priority::HARDWARE; }
 
   void set_pins(uint8_t clock, uint8_t data, uint8_t reply) { clock_pin_ = clock; data_pin_ = data; reply_pin_ = reply; }
+  // Reply-pin output drive strength in mA (2/4/8/12). 2 mA limits current if the panel
+  // fights the line, for setups without a series resistor.
+  void set_reply_drive_ma(uint8_t ma) { reply_drive_ma_ = ma; }
   void set_water_sensor(sensor::Sensor *s) { water_ = s; }
   void set_setpoint_sensor(sensor::Sensor *s) { setpoint_ = s; }
   void set_display_sensor(sensor::Sensor *s) { display_ = s; }
@@ -79,6 +82,7 @@ class JacuzziPanel : public Component {
   uint32_t last_aux_ms_{0};
 
   uint8_t clock_pin_{2}, data_pin_{3}, reply_pin_{4};
+  uint8_t reply_drive_ma_{4};
   volatile bool core1_go_{false};
 
   ::jacuzzi_bus::PanelDecoder decoder_;

@@ -35,7 +35,10 @@ ota:
 jacuzzi_panel:
   clock_pin: 2   # J1-A pin 6
   data_pin: 3    # J1-A pin 5
-  reply_pin: 4   # J1-A pin 4 (via 470 ohm)
+  reply_pin: 4   # J1-A pin 4 (via 470 ohm if available)
+  # No series resistor fitted: limit GP4's own drive to 2 mA. Raise to 4mA/8mA only if
+  # presses don't register (see docs/SETUP.md step 7).
+  reply_drive_strength: 2mA
   water_temperature:
     name: Water Temperature
   set_temperature:

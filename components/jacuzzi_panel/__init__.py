@@ -28,6 +28,7 @@ MULTI_CONF = False
 CONF_CLOCK_PIN = "clock_pin"
 CONF_DATA_PIN = "data_pin"
 CONF_REPLY_PIN = "reply_pin"
+CONF_REPLY_DRIVE_STRENGTH = "reply_drive_strength"
 CONF_WATER_TEMPERATURE = "water_temperature"
 CONF_SET_TEMPERATURE = "set_temperature"
 CONF_DISPLAY_TEMPERATURE = "display_temperature"
@@ -102,6 +103,8 @@ CONFIG_SCHEMA = cv.Schema(
         cv.Optional(CONF_CLOCK_PIN, default=2): pins.internal_gpio_input_pin_number,
         cv.Optional(CONF_DATA_PIN, default=3): pins.internal_gpio_input_pin_number,
         cv.Optional(CONF_REPLY_PIN, default=4): pins.internal_gpio_output_pin_number,
+        # 2mA when the reply line has no series resistor; raise only if presses don't register.
+        cv.Optional(CONF_REPLY_DRIVE_STRENGTH, default="4mA"): cv.enum({"2MA": 2, "4MA": 4, "8MA": 8, "12MA": 12}, upper=True),
         cv.Optional(CONF_WATER_TEMPERATURE): TEMP_SCHEMA,
         cv.Optional(CONF_SET_TEMPERATURE): TEMP_SCHEMA,
         cv.Optional(CONF_DISPLAY_TEMPERATURE): TEMP_SCHEMA,
@@ -136,6 +139,7 @@ async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
     cg.add(var.set_pins(config[CONF_CLOCK_PIN], config[CONF_DATA_PIN], config[CONF_REPLY_PIN]))
+    cg.add(var.set_reply_drive_ma(config[CONF_REPLY_DRIVE_STRENGTH]))
 
     for key, setter in (
         (CONF_WATER_TEMPERATURE, "set_water_sensor"),

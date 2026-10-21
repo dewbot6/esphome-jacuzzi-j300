@@ -11,7 +11,7 @@ J1-A numbering from [j1a-pinout.md](j1a-pinout.md). The Pico 2 W runs ESPHome
 |---|---|---|---|---|---|
 | Clock | 6 | S3 bottom | GP2 | 4 | in |
 | Data | 5 | S3 top | GP3 | 5 | in |
-| Button reply | 4 | S2 bottom | GP4 (through 470 Ω) | 6 | out, only while pressing |
+| Button reply | 4 | S2 bottom | GP4 (through 470 Ω, or direct at `reply_drive_strength: 2mA`) | 6 | out, only while pressing |
 | Ground | 8 | S4 bottom | GND | 3 (any GND) | — |
 | +5 V | 7 | S4 top | VSYS | 39 | power in |
 | Listen-only | 1 | S1 top | GP5 | 7 | in (never driven) |

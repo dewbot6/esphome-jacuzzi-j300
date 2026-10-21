@@ -36,7 +36,7 @@ the tub, with Claude Code helping (see [`CLAUDE.md`](../CLAUDE.md)).
 | 2-pin Y-splitter, **1 female → 2 female**, 2.54 mm (PC front-panel type) | 4 | [GELRHONR F→2F 10-pack](https://www.amazon.com/dp/B0DSZWFS1V) |
 | 2.54 mm **double-row male header, equal-length pins on both sides** | 1 strip | [2×40 long-pin header](https://www.amazon.com/Break-away-Headers-2-54mm-Length-Centered/dp/B07842GC5F) |
 | Male-to-male Dupont jumper wires | 8 | [ELEGOO jumper kit](https://www.amazon.com/Elegoo-EL-CP-004-Multicolored-Breadboard-arduino/dp/B01EV70C78) |
-| 470 Ω resistor (1/4 W) | 1 | any |
+| 470 Ω resistor (1/4 W), *optional*. Without it, the firmware limits GP4 to 2 mA | 1 | any |
 | Micro-USB data cable (for the first flash only) | 1 | any |
 | Multimeter (the FNIRSI 2C53T works) | 1 | |
 | Fine marker / paint pen, masking tape, small zip ties | | |
@@ -172,15 +172,21 @@ If anything looks wrong, stop here. See *Troubleshooting*.
 
 Only after step 6 works, and with the pin 4 measurements from step 4 recorded.
 
-1. Breaker off. Clamp the **470 Ω resistor** in the **GP4** terminal; connect the **pin 4
-   jumper** to the resistor's other leg (a second terminal or a tight twist, no solder),
-   so the path is `J1-A pin 4 → jumper → 470 Ω → GP4`. Breaker on.
+1. Breaker off. Connect the **pin 4 jumper** to **GP4**:
+   - **With a 470 Ω resistor** (preferred): clamp the resistor in the GP4 terminal and connect
+     the jumper to its other leg, so the path is `J1-A pin 4 → jumper → 470 Ω → GP4`.
+   - **Without a resistor:** jumper straight into GP4. `jacuzzi_panel.yaml` already sets
+     `reply_drive_strength: 2mA`, which limits how hard the Pico can drive the line, so it
+     can't push much current into the panel if they ever disagree.
+   Breaker on.
 2. In Home Assistant, turn on **Control Enabled**. (It refuses if the bus isn't being received.)
 3. **First press: Temp Up, once.** The first + press only *shows* the set point, so this is
    harmless. Expect the panel display to switch to the set point for ~3 s, and the log to
    show `Pressing scan pos 4`.
-   - **Display didn't react:** turn Control off. The tub's processor may not accept the Pico's
-     3.3 V output. Stop and report (see *Troubleshooting*).
+   - **Display didn't react:** turn Control off. If you're wired without the resistor at
+     `2mA`, try `reply_drive_strength: 4mA` (edit `jacuzzi_panel.yaml`, `esphome run` over
+     Wi-Fi) and test again; `8mA` is the most to try **without** a resistor. If it still
+     doesn't react, the tub's processor may not accept the Pico's 3.3 V. Stop and report.
 4. **Jets 2 Button** → Jets 2 should start; press again → stop.
 5. **Temp Up** twice, watch the set point go up by 1. **Temp Down** to put it back.
 6. Turn **Control Enabled** off when you're done testing. It also goes off by itself
@@ -198,7 +204,7 @@ Only after step 6 works, and with the pin 4 measurements from step 4 recorded.
 | Pico doesn't power up at the tub | VSYS jumper not on pin 7 (S4 dot side), or GND not on pin 8. |
 | `set point` never appears | Normal until someone presses + or −; the set point is only sent while it's displayed. |
 | Control won't turn on | Bus not received (fix that first); it's a safety interlock. |
-| Press logged but display doesn't react | Reply wiring (pin 4 → 470 Ω → GP4), or the 3.3 V high isn't enough for the tub's processor. Report it; don't try to "boost" it. |
+| Press logged but display doesn't react | Reply wiring (pin 4 → GP4, through 470 Ω if fitted). Without a resistor, step `reply_drive_strength` 2mA → 4mA → 8mA (no higher). Otherwise the 3.3 V high may not be enough. Report it; don't add "boost" circuits. |
 | C-code error on the panel (e.g. C96) | Breaker off, unplug the Pico tap, plug the panel straight into J1-A, then power on. Report what was happening. |
 
 ## Undo everything

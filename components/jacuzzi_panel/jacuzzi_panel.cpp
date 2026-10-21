@@ -36,6 +36,11 @@ void JacuzziPanel::setup() {
   gpio_put(this->reply_pin_, false);
   gpio_set_dir(this->reply_pin_, GPIO_IN);
   gpio_set_input_enabled(this->reply_pin_, false);
+  gpio_set_slew_rate(this->reply_pin_, GPIO_SLEW_RATE_SLOW);
+  gpio_set_drive_strength(this->reply_pin_, this->reply_drive_ma_ >= 12  ? GPIO_DRIVE_STRENGTH_12MA
+                                            : this->reply_drive_ma_ >= 8 ? GPIO_DRIVE_STRENGTH_8MA
+                                            : this->reply_drive_ma_ >= 4 ? GPIO_DRIVE_STRENGTH_4MA
+                                                                         : GPIO_DRIVE_STRENGTH_2MA);
 
   // Aux (listen-only) inputs: high-impedance, no pulls.
   for (uint8_t i = 0; i < this->aux_n_; i++) {
@@ -263,8 +268,8 @@ void JacuzziPanel::dump_config() {
                 (unsigned) ((sysinfo_hw->chip_id & SYSINFO_CHIP_ID_REVISION_BITS) >> SYSINFO_CHIP_ID_REVISION_LSB));
   for (uint8_t i = 0; i < this->aux_n_; i++)
     ESP_LOGCONFIG(TAG, "  Listen-only: %s on GP%u", this->aux_[i].label, this->aux_[i].pin);
-  ESP_LOGCONFIG(TAG, "  Clock GP%u, Data GP%u, Reply GP%u (driven only while Control is on)", this->clock_pin_,
-                this->data_pin_, this->reply_pin_);
+  ESP_LOGCONFIG(TAG, "  Clock GP%u, Data GP%u, Reply GP%u (driven only while Control is on, %u mA drive)",
+                this->clock_pin_, this->data_pin_, this->reply_pin_, this->reply_drive_ma_);
 }
 
 void ControlSwitch::write_state(bool state) { this->parent_->set_control_enabled(state); }

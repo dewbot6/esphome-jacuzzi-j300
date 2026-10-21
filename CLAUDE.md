@@ -21,7 +21,8 @@ confirm each check before moving on, and don't skip the measurement steps.
 
 1. **Never drive CLOCK (J1-A 6) or DATA (J1-A 5)**, and never transmit on the RJ45 lines.
    Doing that in May caused a **C96 error and a stuck recirc pump**.
-2. The only output is the **reply line (J1-A 4 → 470 Ω → GP4)**, driven only during a scan
+2. The only output is the **reply line (J1-A 4 → GP4**, through 470 Ω if fitted; without it,
+   `reply_drive_strength` stays at `2mA`, never above `8mA`), driven only during a scan
    pulse, only while **Control Enabled** is on. Don't weaken this:
    - keep `restore_mode: ALWAYS_OFF` on the control switch (the schema enforces it);
    - keep the bus-OK interlock and the ±3 µs timing check in `panel_decoder.h`;
