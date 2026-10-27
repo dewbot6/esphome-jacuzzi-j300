@@ -40,13 +40,23 @@ inline constexpr uint8_t CAPTURE_WRAP_TARGET = 0;
 inline constexpr uint8_t CAPTURE_WRAP = 5;
 // ISR shifts LEFT, no autopush (in_shiftdir = false).
 
-// --- Press: drive the reply pin high for exactly one wide clock pulse ------------------
+// --- Press: drive the reply pin high for one button-scan slot -------------------------
 // TX word = number of clock pulses to let pass before the one to drive (k-1 for scan
 // position k, written right after short pulse 24 ends). Every pulse it counts must stay
 // high for ~1 us (and every low must stay low ~1 us), so sub-microsecond glitches on the
 // clock line are never counted. It drives from the target pulse's rising edge (~0.1 us),
 // re-checks after ~1 us that it really is a pulse (else releases and waits for the real
-// one), holds until the falling edge, releases (high-Z) and pushes one RX word ("done").
+// one), then holds for a fixed ~11.6 us from the rising edge: through the 7 us pulse AND the
+// ~4 us low gap after it, ~0.6 us into pulse k+1. Then it releases (high-Z) and pushes one RX
+// word ("done"). Timing the hold (not waiting for the falling edge) means a sub-microsecond
+// dip on the clock can't cut the press short.
+//
+//
+// The hold matches the real panel (Logic 8, captures 31/32): its reply rises 0.28 us after
+// pulse k rises and falls 0.8 us after pulse k+1 rises (4.7-4.8 us after pulse k falls),
+// 11.5 us in all. The wide pulses are 7.04 us high, 11.0 us apart in every capture.
+// Releasing at the falling edge (the 2026-10-26/27 firmware) was ignored by the board, which
+// evidently samples the reply after it drops the clock.
 // SET_BASE = reply pin, SET_COUNT = 1.
 //
 //   0: pull block              ; wait for an arm word
@@ -64,11 +74,11 @@ inline constexpr uint8_t CAPTURE_WRAP = 5;
 //  12: set  pins, 1
 //  13: set  pindirs, 1         ;   drive high (~0.1 us after the edge)
 //  14: mov  y, y [19]          ;   ~1 us
-//  15: jmp  pin, 19            ;   still high: it's the real pulse
-//  16: set  pindirs, 0         ;   glitch: release...
-//  17: set  pins, 0
-//  18: jmp  11                 ;   ...and wait for the real one
-//  19: wait 0 pin 0            ; hold until it falls
+//  15: jmp  pin, 18            ;   still high: it's the real pulse
+//  16: set  pindirs, 0         ;   glitch: release and wait for the real one
+//  17: jmp  11
+//  18: set  y, 25              ; hold 26 x 8 cycles = 10.4 us more: release ~11.6 us after
+//  19: jmp  y--, 19 [7]        ;   the rising edge (~4.6 us after the fall), like the panel
 //  20: set  pindirs, 0         ; release: high-Z
 //  21: set  pins, 0
 //  22: push noblock            ; "done"   .wrap (-> 0)
@@ -88,11 +98,11 @@ inline constexpr uint16_t PRESS_PROGRAM[] = {
     0xE001,  // 12 set pins, 1
     0xE081,  // 13 set pindirs, 1
     0xB342,  // 14 mov y, y [19]
-    0x00D3,  // 15 jmp pin, 19
+    0x00D2,  // 15 jmp pin, 18
     0xE080,  // 16 set pindirs, 0
-    0xE000,  // 17 set pins, 0
-    0x000B,  // 18 jmp 11
-    0x2020,  // 19 wait 0 pin 0
+    0x000B,  // 17 jmp 11
+    0xE059,  // 18 set y, 25
+    0x0793,  // 19 jmp y--, 19 [7]
     0xE080,  // 20 set pindirs, 0
     0xE000,  // 21 set pins, 0
     0x8000,  // 22 push noblock

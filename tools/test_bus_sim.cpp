@@ -52,6 +52,7 @@ struct SimSM {
           case 0: take = true; break;
           case 1: take = (x == 0); break;
           case 2: take = (x != 0); x--; break;
+          case 4: take = (y != 0); y--; break;
           case 6: take = (gpio >> jmp_pin) & 1; break;
           default: std::fprintf(stderr, "unsupported jmp cond %d\n", cond); std::exit(3);
         }
@@ -186,8 +187,9 @@ int main(int argc, char **argv) {
   double next_press = t0 + 1.0;
   bool drive = false;
   double drive_start = 0;
-  int windows = 0, misplaced = 0, early = 0;
-  double lat_max = 0, lat_sum = 0;
+  int windows = 0, misplaced = 0, early = 0, cut = 0, aborts = 0;
+  double last_abort = -1;
+  double lat_max = 0, lat_sum = 0, hold_min = 1, hold_max = 0;
   std::vector<uint32_t> decoded;
   double glitch_until = -1;
   const uint64_t n_cycles = static_cast<uint64_t>((t_end - t0) * SM_CLOCK_HZ);
@@ -210,13 +212,29 @@ int main(int argc, char **argv) {
       bool ok = false, ok_early = false; double lat = 0;
       for (const TruthFrame &tf : truth) {
         const double r = tf.wide_rise[press_pos - 1], fl = tf.wide_fall[press_pos - 1];
-        if (drive_start >= r - 1e-9 && t <= fl + 0.3e-6) { ok = true; lat = drive_start - r; break; }
+        // Like the real panel, the drive must last through the pulse and its ~4 us low gap:
+        // release 3.5-5.5 us after the falling edge (the panel releases at 4.7-4.8 us).
+        const bool end_ok = t >= fl + 3.5e-6 && t <= fl + 5.5e-6;
+        if (drive_start >= r - 1e-9 && drive_start < fl && end_ok) { ok = true; lat = drive_start - r; hold_max = std::max(hold_max, t - fl); hold_min = std::min(hold_min, t - fl); break; }
         // A glitch just before the target pulse can start the drive up to ~1 us early; it
         // then covers the correct pulse. Counted separately, not as misplaced.
-        if (drive_start >= r - 1.2e-6 && drive_start < r && t >= fl - 0.3e-6 && t <= fl + 0.3e-6) { ok_early = true; break; }
+        if (drive_start >= r - 1.2e-6 && drive_start < r && end_ok) { ok_early = true; break; }
       }
-      if (ok_early) { early++; std::printf("  early start (glitch) at %.6fs, covers the correct pulse\n", drive_start); }
-      else if (!ok) { misplaced++; std::printf("  MISPLACED drive at %.6fs (+%.2f us)\n", drive_start, (t - drive_start) * 1e6); }
+      // Started on the right pulse but ended early because core 1 aborted (a glitch broke the
+      // frame): safe, the press just doesn't count. Not misplaced.
+      bool ok_cut = false;
+      if (!ok && !ok_early && last_abort >= drive_start && t - last_abort < 0.2e-6)
+        for (const TruthFrame &tf : truth) {
+          const double r = tf.wide_rise[press_pos - 1], fl = tf.wide_fall[press_pos - 1];
+          if (drive_start >= r - 1.2e-6 && drive_start < fl && t <= fl + 5.5e-6) { ok_cut = true; break; }
+        }
+      if (ok_cut) cut++;
+      else if (ok_early) { early++; std::printf("  early start (glitch) at %.6fs, covers the correct pulse\n", drive_start); }
+      else if (!ok) {
+        misplaced++;
+        double best = 1e9; for (const TruthFrame &tf : truth) { const double dd = drive_start - tf.wide_rise[press_pos - 1]; if (std::fabs(dd) < std::fabs(best)) best = dd; }
+        std::printf("  MISPLACED drive at %.6fs (+%.2f us), %.2f us from the target rise\n", drive_start, (t - drive_start) * 1e6, best * 1e6);
+      }
       else { lat_max = std::max(lat_max, lat); lat_sum += lat; }
     }
 
@@ -228,7 +246,7 @@ int main(int argc, char **argv) {
         if (drop_pct > 0 && U(rng) * 100 < drop_pct) continue;
         const bool fresh = cap.rx.empty();
         const BusAssembler::Action a = as.on_pulse(capture_width_x10(w), capture_data(w), now_us, fresh);
-        if (a.abort) prs.reset();
+        if (a.abort) { prs.reset(); last_abort = t; aborts++; }
         if (a.arm) prs.tx.push_back(a.skip);
         if (as.frame_seq() != decoded.size()) decoded.push_back(as.frame());
       }
@@ -247,8 +265,10 @@ int main(int argc, char **argv) {
               truth.size(), decoded.size(), truth.empty() ? 0.0 : 100.0 * decoded.size() / truth.size(),
               frames_ok ? "yes" : "NO", as.bad(), as.refusals(), (unsigned long long) cap.rx_dropped);
   if (press_pos)
-    std::printf("presses: drive_windows=%d misplaced=%d early_but_correct=%d  drive latency after rise: avg %.0f ns, max %.0f ns\n",
-                windows, misplaced, early, windows - misplaced - early ? 1e9 * lat_sum / (windows - misplaced - early) : 0.0,
+    std::printf("presses: drive_windows=%d misplaced=%d early_but_correct=%d cut_by_abort=%d (aborts %d)  drive latency after rise: avg %.0f ns, max %.0f ns\n",
+                windows, misplaced, early, cut, aborts, windows - misplaced - early - cut ? 1e9 * lat_sum / (windows - misplaced - early - cut) : 0.0,
                 1e9 * lat_max);
+  if (press_pos && hold_max > 0)
+    std::printf("         release after the falling edge: %.2f-%.2f us (real panel: 4.7-4.8 us)\n", 1e6 * hold_min, 1e6 * hold_max);
   return (misplaced || !frames_ok) ? 1 : 0;
 }

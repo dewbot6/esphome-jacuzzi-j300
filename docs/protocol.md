@@ -32,6 +32,14 @@ REPLY                                       high in the pressed button's slot
 1. **24 data bits** to the panel, bit 1 first. The panel latches DATA on each rising edge.
 2. **7-pulse button scan.** The panel raises REPLY during the wide pulse for a held button.
 
+**Reply timing** (Logic 8, captures 31/32; wide pulses are 7.04 µs high, 11.0 µs apart): for
+button k, REPLY rises **0.28 µs after pulse k rises** and falls **0.8 µs after pulse k+1 rises**
+(4.7–4.8 µs after pulse k falls): 11.5 µs, covering the pulse *and the low gap after it*. It
+behaves like the output of a shift register clocked by the rising edges. For position 7 it
+stays high until the next frame's clocking starts. A Pico drive that ended at pulse k's falling
+edge was ignored (2026-10-27 test), so the board likely samples REPLY after dropping the clock.
+A human press showed REPLY in 2–8 consecutive frames.
+
 Once per second a **header block** (8 short + 7 wide pulses, data `00111001` then 1s)
 precedes the frame. It has been identical in every capture; its purpose is unknown.
 

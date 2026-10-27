@@ -73,8 +73,10 @@ because 2 µs clock pulses outran the interrupt, and its presses never registere
   24-bit frames, and decides when to arm a press. Values publish after two identical frames.
 - **Press state machine:** core 1 arms it right after short pulse 24 of a frame, with
   "let k−1 pulses pass". It counts only pulses that stay high ≥ 1 µs (glitch-proof). It drives
-  GP4 high from the target pulse's **rising edge (~0.1 µs)** to its falling edge, re-checks after
-  1 µs that it was a real pulse, then releases GP4 to high-Z and reports "done".
+  GP4 high from the target pulse's **rising edge (~0.1 µs)**, re-checks after 1 µs that it was a
+  real pulse, holds for a fixed **11.6 µs** from the edge (through the 7 µs pulse and the ~4 µs gap
+  after it, like the real panel: see docs/protocol.md), then releases GP4 to high-Z and reports
+  "done".
 - **Arming rules:** only on a normal frame (exactly 24 short pulses), only if the 24 pulses spanned
   370–396 µs (a wrong count can't have the right span), only if core 1 isn't running behind. A
   press holds for 3 frames (max 5 drive windows), with 400 ms between queued presses. If the frame

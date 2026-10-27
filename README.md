@@ -52,12 +52,13 @@ In Home Assistant, **Settings → Devices & services** discovers "Jacuzzi J355 P
 
 ## How it works
 
-Every 100 ms the main board clocks 24 data bits to the panel: the heater, both jets and three
+Every ~92 ms the main board clocks 24 data bits to the panel: the heater, both jets and three
 BCD display digits. Then it runs a 7-pulse button scan, during which the panel raises the reply
 line in the pressed button's slot. The Pico's PIO hardware captures every clock pulse and
 DATA bit with no software in the timing path. Its second core assembles the frames, away from
 Wi-Fi. To press a button, a second PIO state machine drives the reply line from the exact rising
-edge of that button's scan pulse to its falling edge, ignoring sub-microsecond glitches. It
+edge of that button's scan pulse for 11.6 µs, through the pulse and the gap after it, the way
+the real panel does, ignoring sub-microsecond glitches. It
 only arms on a frame whose pulse count and timing check out. Otherwise it doesn't press at all.
 
 Full protocol: **[docs/protocol.md](docs/protocol.md)**.

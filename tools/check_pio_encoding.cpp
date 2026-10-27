@@ -19,8 +19,9 @@ int main() {
   const unsigned prs[] = {pio_encode_pull(false,true), pio_encode_out(pio_x,32), pio_encode_jmp_not_x(11),
     pio_encode_wait_pin(true,0), nop, pio_encode_jmp_pin(7), pio_encode_jmp(3), pio_encode_wait_pin(false,0), nop,
     pio_encode_jmp_pin(7), pio_encode_jmp_x_dec(2), pio_encode_wait_pin(true,0), pio_encode_set(pio_pins,1),
-    pio_encode_set(pio_pindirs,1), nop, pio_encode_jmp_pin(19), pio_encode_set(pio_pindirs,0), pio_encode_set(pio_pins,0),
-    pio_encode_jmp(11), pio_encode_wait_pin(false,0), pio_encode_set(pio_pindirs,0), pio_encode_set(pio_pins,0),
+    pio_encode_set(pio_pindirs,1), nop, pio_encode_jmp_pin(18), pio_encode_set(pio_pindirs,0),
+    pio_encode_jmp(11), pio_encode_set(pio_y,25), pio_encode_jmp_y_dec(19) | pio_encode_delay(7),
+    pio_encode_set(pio_pindirs,0), pio_encode_set(pio_pins,0),
     pio_encode_push(false,false)};
   int bad = 0;
   for (unsigned i = 0; i < sizeof cap / sizeof *cap; i++) if (cap[i] != jacuzzi_bus::CAPTURE_PROGRAM[i]) { printf("capture %u: %04X vs SDK %04X\n", i, jacuzzi_bus::CAPTURE_PROGRAM[i], cap[i]); bad++; }

@@ -63,8 +63,8 @@ class BusAssembler {
           frame_ = bits_;
           frame_seq_++;
           if (injected_) count_injection_();
-          // Position 7's "done" and this pulse share a falling edge and may be read in
-          // either order: give a late "done" until the next pulse before cancelling.
+          // Position 7's "done" comes ~4.6 us after this pulse falls (the press holds through
+          // the gap, bus_pio.h): give a late "done" until the next pulse before cancelling.
           if (armed_) frame_done_armed_ = true;
           else if (press_windows_ == 0) press_pos_ = 0;
         }
