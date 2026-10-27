@@ -15,9 +15,11 @@ confirm each check before moving on, and don't skip the measurement steps.
 - **Backup method:** read-only Waveshare ESP32 on the RJ45 port, in [`rj45/`](rj45/README.md). It is
   deployed and working, so leave it alone unless asked.
 - Status (2026-10-27): **reading works on the tub** (PIO capture, ~330 frames per 30 s).
-  **Control not yet working.** At 2 mA, presses releasing at the scan pulse's falling edge were
-  sent (`drives` rose 3 per press) but ignored. The press now holds 11.6 µs like the real panel
-  (docs/protocol.md "Reply timing"). Retest at 2 mA first, then 4 mA, then 8 mA at most.
+  **Control not yet working.** Presses are sent (`drives` +3 per press) but the board ignores
+  them: first releasing at the scan pulse's falling edge (2 mA), then with an 11.6 µs hold matching
+  the real panel's timing within ~0.2 µs (docs/protocol.md "Reply timing") at 2, 4 and 8 mA. Not
+  even the first-press "show set point" happens, while a hand press logged fine. Suspect the
+  electrical side (3.3 V high too low for the board's input, or the wiring); measure before changing firmware.
 
 ## Safety rules (non-negotiable)
 
@@ -74,8 +76,9 @@ c++ -std=c++17 -O2 -I components/jacuzzi_panel tools/test_bus_sim.cpp -o /tmp/bu
 
 - Does the PIC accept the Pico's **3.3 V** high on the reply line? If the 11.6 µs hold still
   isn't taken at 8 mA, that's the likely reason.
-- `bad` frames rose from ~0 (morning, heater off) to ~5% (afternoon, heater on), Control on or
-  off. Likely heater-relay/element noise. Bad frames are dropped and never armed, so it's safe.
+- `bad` frames: 0 with only the heater on, then ~2-5% from the moment the jets started
+  (2026-10-27 13:09), Control on or off. Likely pump-motor noise. Bad frames are dropped and
+  never armed, so it's safe.
 - J1-A **pin 4** pull-down value; **pins 1–3** function; **bit 6 / slot 5** meaning.
 
 ## Conventions
