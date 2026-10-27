@@ -76,7 +76,9 @@ because 2 µs clock pulses outran the interrupt, and its presses never registere
   GP4 high from the target pulse's **rising edge (~0.1 µs)**, re-checks after 1 µs that it was a
   real pulse, holds for a fixed **11.6 µs** from the edge (through the 7 µs pulse and the ~4 µs gap
   after it, like the real panel: see docs/protocol.md), then releases GP4 to high-Z and reports
-  "done".
+  "done". With `reply_buffer: diode` (GP4 → Pixel Shifter → BAT85 diode → pin 4, SETUP.md
+  step 8) the firmware forces GP4's output enable on, so GP4 sits low between presses and the
+  diode keeps pin 4 free; the same program drives it high for the 11.6 µs.
 - **Arming rules:** only on a normal frame (exactly 24 short pulses), only if the 24 pulses spanned
   370–396 µs (a wrong count can't have the right span), only if core 1 isn't running behind. A
   press holds for 3 frames (max 5 drive windows), with 400 ms between queued presses. If the frame

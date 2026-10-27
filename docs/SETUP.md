@@ -4,9 +4,10 @@ Step-by-step instructions to build the tap, wire the Raspberry Pi Pico 2 W, flas
 to Home Assistant and bring up button control safely. Written to be followed by someone at
 the tub, with Claude Code helping (see [`CLAUDE.md`](../CLAUDE.md)).
 
-> **Status:** the firmware compiles and passes offline tests against real recordings of
-> the bus, but this is its **first hardware bring-up**. Follow the order below. Each stage
-> checks the previous one before anything is ever driven onto the bus.
+> **Status (2026-10-27):** reading works on the tub (steps 1–6). Pressing buttons with the
+> Pico's own 3.3 V output (step 7) was ignored by the board at every drive strength, so
+> control goes through a small 5 V buffer board and a diode: **step 8**. Follow the order
+> below. Each stage checks the previous one before anything is driven onto the bus.
 
 ![Wiring diagram](wiring.svg)
 
@@ -38,6 +39,9 @@ the tub, with Claude Code helping (see [`CLAUDE.md`](../CLAUDE.md)).
 | Male-to-male Dupont jumper wires | 8 | [ELEGOO jumper kit](https://www.amazon.com/Elegoo-EL-CP-004-Multicolored-Breadboard-arduino/dp/B01EV70C78) |
 | 470 Ω resistor (1/4 W), *optional*. Without it, the firmware limits GP4 to 2 mA | 1 | any |
 | Micro-USB data cable (for the first flash only) | 1 | any |
+| **Step 8:** Adafruit Pixel Shifter (3.3 V → 5 V buffer, screw terminals) | 1 | [Adafruit #6066](https://www.adafruit.com/product/6066) (also on DigiKey) |
+| **Step 8:** BAT85 Schottky diode (thin legs fit a Dupont socket) | 1 | [BAT85 100-pack](https://www.amazon.com/dp/B0CKSNPVH8) |
+| **Step 8:** male-to-female (or female-female) Dupont jumper, heat-shrink or electrical tape | 1–2 | ELEGOO kit above has all three types |
 | Multimeter (the FNIRSI 2C53T works) | 1 | |
 | Fine marker / paint pen, masking tape, small zip ties | | |
 
@@ -188,11 +192,61 @@ much more slowly, the bus isn't being read cleanly; fix that first.
    - **Display didn't react:** turn Control off. If you're wired without the resistor at
      `2mA`, try `reply_drive_strength: 4mA` (edit `jacuzzi_panel.yaml`, `esphome run` over
      Wi-Fi) and test again; `8mA` is the most to try **without** a resistor. If it still
-     doesn't react, the tub's processor may not accept the Pico's 3.3 V. Stop and report.
+     doesn't react, the tub's processor doesn't accept the Pico's 3.3 V: go to **step 8**.
 4. **Jets 2 Button** → Jets 2 should start; press again → stop.
 5. **Temp Up** twice, watch the set point go up by 1. **Temp Down** to put it back.
 6. Turn **Control Enabled** off when you're done testing. It also goes off by itself
    after any reboot, or if the bus is lost for 2 s.
+
+---
+
+## 8. Control through the 5 V buffer (Pixel Shifter + diode)
+
+Why: the board ignored the Pico's 3.3 V presses at 2, 4 and 8 mA (2026-10-27), with timing
+that matches the real panel. The Adafruit Pixel Shifter turns GP4's 3.3 V into a 5 V signal.
+Its output is always driven (low when idle), so it reaches pin 4 **through a diode**: high
+passes, low is blocked, and pin 4 stays free for the real panel. `reply_buffer: diode` in
+`jacuzzi_panel.yaml` tells the firmware to hold GP4 firmly low between presses.
+
+![Buffer wiring](wiring-buffer.svg)
+
+Do it in this order. The diode only touches pin 4 once the firmware is in `diode` mode.
+
+1. **Breaker off.** Take the pin 4 jumper off **GP4** and tape its end.
+2. Wire the Pixel Shifter's **INPUT** block (labels on the board):
+
+   | Pixel Shifter | Pico breakout terminal |
+   |---|---|
+   | **G** | **GND** |
+   | **V** | **3V3 (OUT)** (the shifter makes its own 5 V) |
+   | **DAT** | **GP4** |
+   | **CLK** | another **GND** (unused input, tied low) |
+
+3. Diode: clamp its **plain end** (no stripe) in the **OUTPUT D5** terminal. Leave the
+   **striped end unconnected** for now. Leave **G, !D5, C5** on the OUTPUT side empty.
+   **Never use !D5**: it's the inverted output, high when idle.
+4. **Breaker on.** In `jacuzzi_panel.yaml`, set `reply_buffer: diode` (leave
+   `reply_drive_strength` as is). Flash over Wi-Fi: `esphome run jacuzzi_panel.yaml`.
+   **Check the boot log:** `Reply wiring: diode (GP4 -> 5 V buffer -> diode -> J1-A pin 4 …)`,
+   the `PIO: capture …` line, and `frames` rising ~330 per 30 s.
+5. **Breaker off.** Connect the diode's **striped end** to the pin 4 jumper: push the leg
+   into a **female** Dupont end. If the pin 4 jumper's free end is male, swap it for a
+   male-to-female jumper (male into the splitter tail, female onto the diode leg), or add a
+   short female-female jumper. **Stripe toward pin 4.** Cover the joint with heat-shrink or
+   tape. **Breaker on.**
+6. **The real panel must still work:** press **+** twice on the panel by hand. The set point
+   shows on the display, and about 5 s after it returns to water temperature the log shows
+   `set point NN`. Put it back with **−**. If hand presses stop working, breaker off, unplug
+   the diode from the pin 4 jumper, and report.
+7. **Control test**, Control Enabled on, one step at a time with someone at the panel:
+   **Temp Up** twice (the first press shows the set point, the second raises it by 1) →
+   **Temp Down** to put it back → **Jets 2** on → **Jets 2** off → Control Enabled off.
+   `drives` should rise by 3 per press.
+   - **Presses logged but no reaction:** check the diode's direction (stripe toward pin 4)
+     and the DAT/GP4 wire. Don't change anything else; report with the log.
+
+To go back to the original wiring: breaker off, remove the Pixel Shifter and diode, set
+`reply_buffer: none`, flash, then reconnect the pin 4 jumper to GP4 as in step 7.
 
 ---
 
@@ -206,7 +260,8 @@ much more slowly, the bus isn't being read cleanly; fix that first.
 | Pico doesn't power up at the tub | VSYS jumper not on pin 7 (S4 dot side), or GND not on pin 8. |
 | `set point` never appears | Normal until someone presses + or −; the set point is only sent while it's displayed. |
 | Control won't turn on | Bus not received (fix that first); it's a safety interlock. |
-| Press logged but display doesn't react | Reply wiring (pin 4 → GP4, through 470 Ω if fitted). Without a resistor, step `reply_drive_strength` 2mA → 4mA → 8mA (no higher). Otherwise the 3.3 V high may not be enough. Report it; don't add "boost" circuits. |
+| Press logged but display doesn't react | Direct wiring (step 7): this happened on 2026-10-27 at 2/4/8 mA; use the buffer, step 8. Buffer wiring (step 8): diode backwards (stripe must face pin 4), DAT not on GP4, or the shifter's V/G not connected. Don't add other "boost" circuits. |
+| Real panel buttons stop working after step 8 | The yaml still says `reply_buffer: none` with the diode connected, or !D5 used instead of D5. Breaker off, unplug the diode from pin 4, check, report. |
 | C-code error on the panel (e.g. C96) | Breaker off, unplug the Pico tap, plug the panel straight into J1-A, then power on. Report what was happening. |
 
 ## Undo everything

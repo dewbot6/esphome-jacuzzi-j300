@@ -20,6 +20,7 @@
 #include <cstdlib>
 #include <deque>
 #include <random>
+#include <string>
 #include <vector>
 
 using namespace jacuzzi_bus;
@@ -134,6 +135,10 @@ int main(int argc, char **argv) {
   const double press_every = envd("PRESS_EVERY_S", 2.0), drop_pct = envd("DROP_PCT", 0);
   const double glitch_per_s = envd("GLITCH_PER_S", 0), limit_s = envd("LIMIT_S", 1e9);
   const uint64_t poll_cycles = static_cast<uint64_t>(envd("POLL_NS", 500) / 50.0 + 0.5);
+  // REPLY_BUFFER=diode: the firmware forces GP4's output enable on, so the level is just the
+  // PIO's pins latch (pindirs ignored). Default: GP4 drives only when pindirs = 1 and pins = 1.
+  const char *rb = std::getenv("REPLY_BUFFER");
+  const bool diode = rb != nullptr && std::string(rb) == "diode";
 
   FILE *f = std::fopen(argv[1], "r");
   if (!f) { std::perror(argv[1]); return 1; }
@@ -205,7 +210,7 @@ int main(int argc, char **argv) {
     cap.step(g);
     prs.step(g);
 
-    const bool d = prs.pin_dir && prs.pin_out;
+    const bool d = diode ? prs.pin_out : (prs.pin_dir && prs.pin_out);
     if (d && !drive) { drive = true; drive_start = t; }
     if (!d && drive) {
       drive = false; windows++;

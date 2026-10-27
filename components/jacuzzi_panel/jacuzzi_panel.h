@@ -34,6 +34,9 @@ class JacuzziPanel : public Component {
   // Reply-pin output drive strength in mA (2/4/8/12). 2 mA limits current if the panel
   // fights the line, for setups without a series resistor.
   void set_reply_drive_ma(uint8_t ma) { reply_drive_ma_ = ma; }
+  // true: GP4 feeds a 5 V buffer whose output reaches J1-A pin 4 through a diode, so GP4 is
+  // driven at all times (low = released). false: GP4 wired straight to pin 4, high-Z idle.
+  void set_reply_diode(bool d) { reply_diode_ = d; }
   void set_water_sensor(sensor::Sensor *s) { water_ = s; }
   void set_setpoint_sensor(sensor::Sensor *s) { setpoint_ = s; }
   void set_display_sensor(sensor::Sensor *s) { display_ = s; }
@@ -88,6 +91,7 @@ class JacuzziPanel : public Component {
 
   uint8_t clock_pin_{2}, data_pin_{3}, reply_pin_{4};
   uint8_t reply_drive_ma_{4};
+  bool reply_diode_{false};
   volatile bool core1_go_{false};
 
   ::jacuzzi_bus::BusAssembler bus_;

@@ -59,6 +59,12 @@ inline constexpr uint8_t CAPTURE_WRAP = 5;
 // evidently samples the reply after it drops the clock.
 // SET_BASE = reply pin, SET_COUNT = 1.
 //
+// Two ways to wire the reply pin (yaml reply_buffer):
+//   none:  GP4 -> J1-A pin 4 directly. Drive = pindirs 1 (high), release = pindirs 0 (high-Z).
+//   diode: GP4 -> 5 V buffer (Adafruit Pixel Shifter) -> diode -> J1-A pin 4. The firmware
+//          forces GP4's output enable on, so GP4 is always driven: low = released (the diode
+//          blocks), high = drive. Only the `pins` latch matters, which every path sets back to 0.
+//
 //   0: pull block              ; wait for an arm word
 //   1: out  x, 32
 //   2: jmp  !x, 11             ; nothing to skip -> fire
@@ -74,14 +80,15 @@ inline constexpr uint8_t CAPTURE_WRAP = 5;
 //  12: set  pins, 1
 //  13: set  pindirs, 1         ;   drive high (~0.1 us after the edge)
 //  14: mov  y, y [19]          ;   ~1 us
-//  15: jmp  pin, 18            ;   still high: it's the real pulse
-//  16: set  pindirs, 0         ;   glitch: release and wait for the real one
-//  17: jmp  11
-//  18: set  y, 25              ; hold 26 x 8 cycles = 10.4 us more: release ~11.6 us after
-//  19: jmp  y--, 19 [7]        ;   the rising edge (~4.6 us after the fall), like the panel
-//  20: set  pindirs, 0         ; release: high-Z
-//  21: set  pins, 0
-//  22: push noblock            ; "done"   .wrap (-> 0)
+//  15: jmp  pin, 19            ;   still high: it's the real pulse
+//  16: set  pindirs, 0         ;   glitch: release...
+//  17: set  pins, 0            ;   (latch low too: with reply_buffer: diode the pin's output
+//  18: jmp  11                 ;   enable is forced on, so the latch alone sets the level)
+//  19: set  y, 25              ; hold 26 x 8 cycles = 10.4 us more: release ~11.6 us after
+//  20: jmp  y--, 20 [7]        ;   the rising edge (~4.6 us after the fall), like the panel
+//  21: set  pindirs, 0         ; release: high-Z (or, with OE forced on, low next cycle)
+//  22: set  pins, 0
+//  23: push noblock            ; "done"   .wrap (-> 0)
 inline constexpr uint16_t PRESS_PROGRAM[] = {
     0x80A0,  //  0 pull block
     0x6020,  //  1 out x, 32
@@ -98,19 +105,20 @@ inline constexpr uint16_t PRESS_PROGRAM[] = {
     0xE001,  // 12 set pins, 1
     0xE081,  // 13 set pindirs, 1
     0xB342,  // 14 mov y, y [19]
-    0x00D2,  // 15 jmp pin, 18
+    0x00D3,  // 15 jmp pin, 19
     0xE080,  // 16 set pindirs, 0
-    0x000B,  // 17 jmp 11
-    0xE059,  // 18 set y, 25
-    0x0793,  // 19 jmp y--, 19 [7]
-    0xE080,  // 20 set pindirs, 0
-    0xE000,  // 21 set pins, 0
-    0x8000,  // 22 push noblock
+    0xE000,  // 17 set pins, 0
+    0x000B,  // 18 jmp 11
+    0xE059,  // 19 set y, 25
+    0x0794,  // 20 jmp y--, 20 [7]
+    0xE080,  // 21 set pindirs, 0
+    0xE000,  // 22 set pins, 0
+    0x8000,  // 23 push noblock
 };
 inline constexpr uint8_t PRESS_WRAP_TARGET = 0;
-inline constexpr uint8_t PRESS_WRAP = 22;
+inline constexpr uint8_t PRESS_WRAP = 23;
 // OSR shifts RIGHT (out x, 32 takes the whole word), no autopull. jmp_pin = clock pin.
-// Both programs together use 31 of a PIO block's 32 instruction slots.
+// Both programs together use all 32 of a PIO block's instruction slots.
 
 // Convert a capture word's count to pulse width in 0.1 us units.
 inline uint32_t capture_width_x10(uint32_t word, uint32_t sm_hz = SM_CLOCK_HZ) {

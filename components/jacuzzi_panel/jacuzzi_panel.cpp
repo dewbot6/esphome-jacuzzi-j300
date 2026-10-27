@@ -79,11 +79,12 @@ bool JacuzziPanel::programs_match_sdk_() {
       (uint16_t) pio_encode_set(pio_pins, 1),
       (uint16_t) pio_encode_set(pio_pindirs, 1),
       nop1us,
-      (uint16_t) pio_encode_jmp_pin(18),
+      (uint16_t) pio_encode_jmp_pin(19),
       (uint16_t) pio_encode_set(pio_pindirs, 0),
+      (uint16_t) pio_encode_set(pio_pins, 0),
       (uint16_t) pio_encode_jmp(11),
       (uint16_t) pio_encode_set(pio_y, 25),
-      (uint16_t) (pio_encode_jmp_y_dec(19) | pio_encode_delay(7)),
+      (uint16_t) (pio_encode_jmp_y_dec(20) | pio_encode_delay(7)),
       (uint16_t) pio_encode_set(pio_pindirs, 0),
       (uint16_t) pio_encode_set(pio_pins, 0),
       (uint16_t) pio_encode_push(false, false),
@@ -149,7 +150,13 @@ bool JacuzziPanel::setup_pio_() {
   // pio_gpio_init re-enables the input buffer; turn it back off (RP2350 erratum E9 can hold
   // an undriven pad near 2 V, which the main board would read as a held button).
   gpio_set_input_enabled(this->reply_pin_, false);
-  gpio_disable_pulls(this->reply_pin_);
+  if (this->reply_diode_) {
+    // Buffer + diode: GP4 feeds a buffer input, which must never float. Keep the reset
+    // pull-down until the output enable is forced on below (latch low first).
+    gpio_pull_down(this->reply_pin_);
+  } else {
+    gpio_disable_pulls(this->reply_pin_);
+  }
   gpio_set_slew_rate(this->reply_pin_, GPIO_SLEW_RATE_SLOW);
   gpio_set_drive_strength(this->reply_pin_, this->reply_drive_ma_ >= 12  ? GPIO_DRIVE_STRENGTH_12MA
                                             : this->reply_drive_ma_ >= 8 ? GPIO_DRIVE_STRENGTH_8MA
@@ -165,6 +172,9 @@ bool JacuzziPanel::setup_pio_() {
   pio_sm_init(this->press_pio_, this->press_sm_, this->press_off_, &p);
   pio_sm_set_consecutive_pindirs(this->press_pio_, this->press_sm_, this->reply_pin_, 1, false);
   pio_sm_exec(this->press_pio_, this->press_sm_, pio_encode_set(pio_pins, 0));
+  // Buffer + diode: always drive GP4 (low = released). The PIO's pindirs no longer matter;
+  // its pins latch, which every program path and reset_press_sm_() return to 0, sets the level.
+  if (this->reply_diode_) gpio_set_oeover(this->reply_pin_, GPIO_OVERRIDE_HIGH);
 
   pio_sm_set_enabled(this->cap_pio_, this->cap_sm_, true);
   pio_sm_set_enabled(this->press_pio_, this->press_sm_, true);
@@ -403,6 +413,8 @@ void JacuzziPanel::dump_config() {
     ESP_LOGCONFIG(TAG, "  Listen-only: %s on GP%u", this->aux_[i].label, this->aux_[i].pin);
   ESP_LOGCONFIG(TAG, "  Clock GP%u, Data GP%u, Reply GP%u (driven only while Control is on, %u mA drive)",
                 this->clock_pin_, this->data_pin_, this->reply_pin_, this->reply_drive_ma_);
+  ESP_LOGCONFIG(TAG, "  Reply wiring: %s", this->reply_diode_ ? "diode (GP4 -> 5 V buffer -> diode -> J1-A pin 4; GP4 low when idle)"
+                                                              : "none (GP4 -> J1-A pin 4 directly; high-Z when idle)");
   if (this->is_failed()) {
     ESP_LOGE(TAG, "  PIO setup FAILED: not reading the bus, control unavailable");
   } else {

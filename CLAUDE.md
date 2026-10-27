@@ -18,20 +18,30 @@ confirm each check before moving on, and don't skip the measurement steps.
   **Control not yet working.** Presses are sent (`drives` +3 per press) but the board ignores
   them: first releasing at the scan pulse's falling edge (2 mA), then with an 11.6 µs hold matching
   the real panel's timing within ~0.2 µs (docs/protocol.md "Reply timing") at 2, 4 and 8 mA. Not
-  even the first-press "show set point" happens, while a hand press logged fine. Suspect the
-  electrical side (3.3 V high too low for the board's input, or the wiring); measure before changing firmware.
+  even the first-press "show set point" happens, while a hand press logged fine. Most likely the
+  3.3 V high is too low for the board's input. **Next: 5 V buffer** (Adafruit Pixel Shifter + BAT85
+  diode, `reply_buffer: diode`), docs/SETUP.md step 8; parts ordered 2026-10-27.
 
 ## Safety rules (non-negotiable)
 
 1. **Never drive CLOCK (J1-A 6) or DATA (J1-A 5)**, and never transmit on the RJ45 lines.
    Doing that in May caused a **C96 error and a stuck recirc pump**.
-2. The only output is the **reply line (J1-A 4 → GP4**, through 470 Ω if fitted; without it,
-   `reply_drive_strength` stays at `2mA`, never above `8mA`), driven only during a scan
-   pulse, only while **Control Enabled** is on. Don't weaken this:
+2. The only output is the **reply line (J1-A 4 ← GP4)**, driven high only during a scan
+   pulse, only while **Control Enabled** is on. Two wirings, set by `reply_buffer`:
+   - `none`: GP4 straight to pin 4 (through 470 Ω if fitted; without it `reply_drive_strength`
+     stays at `2mA`, never above `8mA`). GP4 is high-Z between presses.
+   - `diode`: GP4 → Pixel Shifter DAT, D5 → BAT85 diode (stripe toward pin 4) → pin 4. GP4 is
+     driven low between presses, so the buffer output is low and the diode keeps pin 4 free.
+     **The yaml must match the wiring**: never connect the diode to pin 4 while the yaml says
+     `none` (GP4 would float and could hold a button), and never wire GP4 straight to pin 4
+     with `diode` (it would hold pin 4 low). Follow the order in SETUP.md step 8.
+
+   Don't weaken this:
    - keep `restore_mode: ALWAYS_OFF` on the control switch (the schema enforces it);
    - keep the bus-OK interlock, the 24-pulse + span checks in `bus_assembler.h`, and the
      glitch checks in the PIO press program (`bus_pio.h`);
-   - don't add "boost" circuits or change the reply pin to push-pull outside the scan window.
+   - don't add other "boost" circuits; outside the scan window the reply pin is high-Z (`none`)
+     or low into the buffer (`diode`), never high.
 3. Wiring changes happen with the tub **off at the main house panel**: 240 V is inside the bay.
 4. **No USB to the Pico while it's wired to the tub** (it's powered from J1-A pin 7). Use Wi-Fi
    for logs/OTA: `esphome logs jacuzzi_panel.yaml`, `esphome run jacuzzi_panel.yaml`.
@@ -55,6 +65,7 @@ Offline test (no hardware needed). It runs the exact PIO words in a simulator ag
 ```
 c++ -std=c++17 -O2 -I components/jacuzzi_panel tools/test_bus_sim.cpp -o /tmp/bussim
 /tmp/bussim captures/31-j1a-buttons/digital.csv 4     # must report decoded 100%, misplaced=0
+REPLY_BUFFER=diode /tmp/bussim captures/31-j1a-buttons/digital.csv 4   # same, diode wiring
 ```
 (Export `digital.csv` from the `.sal` with Saleae Logic 2 first.) Re-run it, and
 `tools/check_pio_encoding.cpp`, after any change to `bus_pio.h` or `bus_assembler.h`.
@@ -65,6 +76,7 @@ c++ -std=c++17 -O2 -I components/jacuzzi_panel tools/test_bus_sim.cpp -o /tmp/bu
 - Bus up: `frame 1000…  heater=0 jets1=0 jets2=0 slot5=0` (bit 1 is always 1), then `water 94`.
 - After + / −: `set point NN` about 5 s after the display returns to water temperature.
 - Control: `Control ENABLED`, `Pressing scan pos 4` (+), 3 (−), 7 (Jets 1), 2 (Jets 2).
+- Boot: `Reply wiring: none (…)` or `Reply wiring: diode (…)`: must match how GP4 is wired.
 - Boot: `PIO: capture pioN smN, press pioN smN, SM clock 20000000 Hz`. A `PIO setup FAILED` or
   `program word … != SDK` line means the component refused to start; report it.
 - Every 30 s: `frames=… bad=… refusals=… drives=… aborts=… fifo_overflows=…`. **`frames` should

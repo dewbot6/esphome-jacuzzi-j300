@@ -39,6 +39,10 @@ jacuzzi_panel:
   # No series resistor fitted: limit GP4's own drive to 2 mA. Raise to 4mA/8mA only if
   # presses don't register (see docs/SETUP.md step 7).
   reply_drive_strength: 2mA
+  # How GP4 reaches J1-A pin 4. Must match the wiring:
+  #   none  = GP4 straight to pin 4 (the original wiring)
+  #   diode = GP4 -> Adafruit Pixel Shifter -> BAT85 diode -> pin 4 (docs/SETUP.md step 8)
+  reply_buffer: none
   water_temperature:
     name: Water Temperature
   set_temperature:
