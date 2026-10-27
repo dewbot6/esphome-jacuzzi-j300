@@ -7,7 +7,7 @@ confirm each check before moving on, and don't skip the measurement steps.
 ## What this is
 
 - Jacuzzi J355, J-300 series main board (PCB `6600-087 REV D`, PN `4PB00931D`, PIC firmware `REV 3.61A`).
-- The main board bit-bangs the topside panel over the 8-pin header **J1-A**: every 100 ms,
+- The main board bit-bangs the topside panel over the 8-pin header **J1-A**: every ~92 ms,
   24 data bits (heater, Jets 1/2, three BCD display digits), then a 7-pulse button scan where
   the panel raises a reply line for the pressed button. Spec: [docs/protocol.md](docs/protocol.md).
 - **Main method:** Raspberry Pi Pico 2 W on J1-A: `jacuzzi_panel.yaml`, `components/jacuzzi_panel/`.
@@ -64,7 +64,7 @@ c++ -std=c++17 -O2 -I components/jacuzzi_panel tools/test_bus_sim.cpp -o /tmp/bu
 - Boot: `PIO: capture pioN smN, press pioN smN, SM clock 20000000 Hz`. A `PIO setup FAILED` or
   `program word … != SDK` line means the component refused to start; report it.
 - Every 30 s: `frames=… bad=… refusals=… drives=… aborts=… fifo_overflows=…`. **`frames` should
-  rise by ~300 per 30 s** (one frame per 100 ms). Much less means the bus isn't being read
+  rise by ~330 per 30 s** (one frame every ~92 ms). Much less means the bus isn't being read
   cleanly; check the wiring before testing control. `refusals` = frames skipped for a press
   because their timing looked wrong (safe). `fifo_overflows` should stay 0.
 

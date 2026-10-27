@@ -58,7 +58,7 @@ class JacuzziPanel : public Component {
   static void aux_isr_(void *arg);
 
  protected:
-  static constexpr uint8_t PRESS_FRAMES = 3;        // hold a press for 3 frames (~300 ms)
+  static constexpr uint8_t PRESS_FRAMES = 3;        // hold a press for 3 frames (~275 ms)
   static constexpr uint32_t PRESS_GAP_MS = 400;     // idle between queued presses
   static constexpr uint32_t BUS_TIMEOUT_MS = 2000;  // no frames for this long = bus lost
   static constexpr uint32_t STABLE_MS = 5000;       // display unchanged this long = water temp

@@ -20,7 +20,7 @@ indirectly from the RJ45 port; see [../rj45/](../rj45/README.md) (backup method)
 
 No strobe or latch line on J1-A. The gap between frames resets the panel.
 
-## Frame (every 100 ms)
+## Frame (every ~92 ms, about 11 per second)
 
 ```
 CLOCK  _|‾|__|‾|__ … 24 short pulses … _|‾|___|‾‾‾‾|__|‾‾‾‾|__ … 7 wide pulses
@@ -62,7 +62,7 @@ timing decode uses, since it can't see bit 1.
 | 7 | Jets 1 |
 | 1, 5, 6 | not used on this panel |
 
-The board polls every 100 ms, so a press must last about 100 ms or longer. **Light and light
+The board polls about every 92 ms, so a press must last about 100 ms or longer. **Light and light
 color** are on a separate ribbon cable from the panel and never appear on this bus.
 
 ## Display behaviour

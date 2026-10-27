@@ -3,7 +3,7 @@
 // PIO capture program (bus_pio.h), and the rules for arming the PIO press program.
 // No ESPHome / Pico SDK dependencies: tools/test_bus_sim.cpp runs it on a PC.
 //
-// Bus (docs/protocol.md): every 100 ms, 24 short clock pulses (~2 us, 15-17 us apart)
+// Bus (docs/protocol.md): every ~92 ms, 24 short clock pulses (~2 us, 15-17 us apart)
 // carry DATA (bit 1 first); then 7 wide pulses (~7 us, 11 us apart) are the button scan.
 // Once a second an 8-short + 7-wide header block precedes the frame.
 

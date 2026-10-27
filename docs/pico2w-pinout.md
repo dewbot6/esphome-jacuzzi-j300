@@ -86,7 +86,7 @@ because 2 µs clock pulses outran the interrupt, and its presses never registere
 - **Boot self-check:** the hand-encoded PIO words are compared with the SDK's `pio_encode_*()`.
   On any mismatch the component fails: no reading, no control.
 - Stats every 30 s: `frames=… bad=… refusals=… drives=… aborts=… fifo_overflows=…`. Expect
-  `frames` to rise by ~300 per 30 s.
+  `frames` to rise by ~330 per 30 s.
 
 ### Testing without hardware
 
