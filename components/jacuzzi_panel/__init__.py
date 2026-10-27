@@ -89,6 +89,9 @@ def _control_always_off(config):
 
 
 def _unique_pins(config):
+    # The PIO capture program reads clock and data as one 2-bit group.
+    if config[CONF_DATA_PIN] != config[CONF_CLOCK_PIN] + 1:
+        raise cv.Invalid("data_pin must be clock_pin + 1 (e.g. clock GP2, data GP3)")
     used = [config[CONF_CLOCK_PIN], config[CONF_DATA_PIN], config[CONF_REPLY_PIN]]
     used += [a[CONF_PIN] for a in config[CONF_AUX_INPUTS]]
     dupes = sorted({p for p in used if used.count(p) > 1})

@@ -8,7 +8,9 @@
 #include "esphome/components/switch/switch.h"
 #include "esphome/components/text_sensor/text_sensor.h"
 
-#include "panel_decoder.h"
+#include "bus_assembler.h"
+#include "bus_pio.h"
+#include "hardware/pio.h"
 
 #include <cstdint>
 
@@ -17,8 +19,10 @@ namespace jacuzzi_panel {
 
 // Reads the J-300 topside panel bus on J1-A directly (clock + data) and, only while
 // the Control switch is on, presses panel buttons by driving the reply line during
-// that button's scan pulse. See docs/pico2w-pinout.md. Runs on a Raspberry Pi Pico 2 W;
-// the bus interrupt is serviced on core 1, away from Wi-Fi.
+// that button's scan pulse. See docs/pico2w-pinout.md. Runs on a Raspberry Pi Pico 2 W.
+// All bus timing is done by two PIO state machines (bus_pio.h): one captures every clock
+// pulse, one drives the reply pin for exactly the target scan pulse. Core 1 only polls
+// their FIFOs and assembles frames (bus_assembler.h), away from Wi-Fi on core 0.
 class JacuzziPanel : public Component {
  public:
   void setup() override;
@@ -47,9 +51,8 @@ class JacuzziPanel : public Component {
   void set_control_enabled(bool en);
   void request_press(uint8_t scan_pos);
 
-  // Core-1 side (called from setup1 / the GPIO interrupt).
-  void attach_bus_interrupt_();
-  static void bus_isr_();
+  // Core-1 side (called from setup1/loop1).
+  void core1_poll_();
   bool ready_for_core1() const { return core1_go_; }
   void attach_aux_interrupts_();
   static void aux_isr_(void *arg);
@@ -64,7 +67,9 @@ class JacuzziPanel : public Component {
 
   void handle_frame_(uint32_t frame24, uint32_t now);
   void track_temperature_(int disp, uint32_t now);
-  void release_reply_();
+  bool setup_pio_();
+  bool programs_match_sdk_();
+  void reset_press_sm_();  // core 1 only
   void poll_aux_(uint32_t now);
 
   struct AuxInput {
@@ -85,7 +90,12 @@ class JacuzziPanel : public Component {
   uint8_t reply_drive_ma_{4};
   volatile bool core1_go_{false};
 
-  ::jacuzzi_bus::PanelDecoder decoder_;
+  ::jacuzzi_bus::BusAssembler bus_;
+  PIO cap_pio_{nullptr}, press_pio_{nullptr};
+  uint cap_sm_{0}, press_sm_{0}, cap_off_{0}, press_off_{0};
+  uint32_t sm_hz_{::jacuzzi_bus::SM_CLOCK_HZ};
+  bool press_busy_{false};                       // core 1: press SM armed, not yet done
+  volatile uint32_t aborts_{0}, overflows_{0};   // written by core 1
   uint32_t seen_seq_{0}, last_frame_ms_{0}, last_stats_ms_{0};
   uint32_t last_frame_{0xFFFFFFFF}, published_{0xFFFFFFFF};
   bool bus_ok_state_{false};

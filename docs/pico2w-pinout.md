@@ -62,35 +62,57 @@ The output is driven high for the whole of that wide clock pulse, for ~3 frames 
 
 `jacuzzi_panel.yaml` + `components/jacuzzi_panel/` (ESPHome, `rp2` / `rpipico2w`).
 
-- **Read:** a clock interrupt on **core 1** (away from Wi-Fi on core 0) samples DATA on
-  every rising edge. `panel_decoder.h` turns edges into 24-bit frames (bit 1 = MSB). Values
-  publish after two identical frames. Entities: Water Temperature, Set Temperature, Display,
-  Heater, Jets 1, Jets 2, Status Slot 5, Panel Bus, Raw Frame.
+All bus timing is done in **PIO** hardware (`bus_pio.h`). No interrupt sits in the timing path.
+(The first version used a core-1 GPIO interrupt. On the tub it decoded only ~1 frame in 10,
+because 2 µs clock pulses outran the interrupt, and its presses never registered.)
+
+- **Capture state machine:** on every clock rise it samples DATA and counts how long the clock
+  stays high. It pushes one word per pulse into an 8-deep FIFO. It cannot miss an edge.
+- **Core 1** (a tight loop in `loop1`, away from Wi-Fi on core 0) drains the FIFO into
+  `bus_assembler.h`. That classifies pulses (glitch < 1 µs, short ≤ 4 µs, wide 5–11 µs), builds
+  24-bit frames, and decides when to arm a press. Values publish after two identical frames.
+- **Press state machine:** core 1 arms it right after short pulse 24 of a frame, with
+  "let k−1 pulses pass". It counts only pulses that stay high ≥ 1 µs (glitch-proof). It drives
+  GP4 high from the target pulse's **rising edge (~0.1 µs)** to its falling edge, re-checks after
+  1 µs that it was a real pulse, then releases GP4 to high-Z and reports "done".
+- **Arming rules:** only on a normal frame (exactly 24 short pulses), only if the 24 pulses spanned
+  370–396 µs (a wrong count can't have the right span), only if core 1 isn't running behind. A
+  press holds for 3 frames (max 5 drive windows), with 400 ms between queued presses. If the frame
+  goes wrong after arming, core 1 resets the press SM, so it never waits into the next frame.
 - **Control:** the **Control Enabled** switch is forced OFF at boot (`restore_mode: ALWAYS_OFF`
   is enforced by the schema). It refuses to turn on until valid frames are arriving, and it
   turns itself off if the bus is lost for 2 s. Buttons: Temp Up (scan pos 4), Temp Down (3),
-  Jets 1 Button (7), Jets 2 Button (2). A press is queued, then driven for 3 frames (max 5 drive
-  windows), with 400 ms between presses.
-- **Press placement:** GP4 is driven only from the rising edge of wide pulse *k* of a normal
-  frame (exactly 24 short pulses before it), and only if that edge arrives within ±3 µs of
-  `rise(short 24) + 17 + 11·(k−1)` µs. It is released on the next edge. Any missed edge
-  means no press. It never means a press in the wrong slot.
+  Jets 1 Button (7), Jets 2 Button (2).
+- **Boot self-check:** the hand-encoded PIO words are compared with the SDK's `pio_encode_*()`.
+  On any mismatch the component fails: no reading, no control.
+- Stats every 30 s: `frames=… bad=… refusals=… drives=… aborts=… fifo_overflows=…`. Expect
+  `frames` to rise by ~300 per 30 s.
 
 ### Testing without hardware
 
-`tools/test_panel_decoder.cpp` replays a J1-A Logic 8 capture through the same decoder:
+`tools/test_bus_sim.cpp` runs the **exact PIO instruction words** in a cycle-by-cycle PIO simulator
+(20 MHz) against a J1-A Logic 8 recording. It models core 1 polling the FIFOs and feeding the same
+assembler:
 
 ```
-c++ -std=c++17 -O2 -I components/jacuzzi_panel tools/test_panel_decoder.cpp -o /tmp/tpd
-/tmp/tpd captures/31-j1a-buttons/digital.csv            # read-only: prints frame changes
-/tmp/tpd captures/31-j1a-buttons/digital.csv 4 1.0      # arm a press at scan pos 4 at t=1 s
-DROP_PCT=5 /tmp/tpd captures/31-j1a-buttons/digital.csv 4 1.0   # with 5% of edges lost
+c++ -std=c++17 -O2 -I components/jacuzzi_panel tools/test_bus_sim.cpp -o /tmp/bussim
+/tmp/bussim captures/31-j1a-buttons/digital.csv        # read-only: frames vs recording
+/tmp/bussim captures/31-j1a-buttons/digital.csv 4      # + a press of scan pos 4 every 2 s
+DROP_PCT=5 GLITCH_PER_S=500 POLL_NS=20000 /tmp/bussim captures/33-j1a-light/digital.csv 7
 ```
 
-Each drive window is checked against the real (undropped) wide pulse *k*. Results
-2026-10-20: frames match `tools/j1a_buttons.py` exactly. Every press window was correctly
-placed for positions 2/3/4/7 on three captures, including at 1/5/10% edge loss.
-(Export `digital.csv` from the `.sal` in Saleae Logic 2 first.)
+Every drive window is checked against the real wide pulse *k* in the recording. Results
+2026-10-26:
+- 100 % of frames decoded on all four captures, all matching the recording.
+- Every press placed correctly for scan positions 2/3/4/7 on every capture.
+- Drive starts 115–140 ns after the clock rises.
+- Still zero misplaced with 5 % dropped FIFO words, 20 µs polling gaps, or 2000 clock glitches/s.
+  The only oddity under heavy combined noise: a glitch just before the target pulse can start the
+  drive up to ~1 µs early; it still covers the correct pulse (reported as `early_but_correct`).
 
-**Not yet tested on hardware:** the Pico hasn't arrived. Also unverified: whether the PIC
-accepts a 3.3 V high on the reply line, and J1-A pin 4's pull-down value.
+`tools/check_pio_encoding.cpp` checks the PIO words against the SDK encoders on a PC (build line
+in the file). Export `digital.csv` from the `.sal` in Saleae Logic 2 before running the simulator.
+
+**Hardware status:** the interrupt version read the tub (badly) and pressed nothing. The PIO
+version has not run on the tub yet. Also still unverified: whether the PIC accepts a 3.3 V high
+on the reply line, and J1-A pin 4's pull-down value.

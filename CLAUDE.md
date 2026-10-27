@@ -25,7 +25,8 @@ confirm each check before moving on, and don't skip the measurement steps.
    `reply_drive_strength` stays at `2mA`, never above `8mA`), driven only during a scan
    pulse, only while **Control Enabled** is on. Don't weaken this:
    - keep `restore_mode: ALWAYS_OFF` on the control switch (the schema enforces it);
-   - keep the bus-OK interlock and the ±3 µs timing check in `panel_decoder.h`;
+   - keep the bus-OK interlock, the 24-pulse + span checks in `bus_assembler.h`, and the
+     glitch checks in the PIO press program (`bus_pio.h`);
    - don't add "boost" circuits or change the reply pin to push-pull outside the scan window.
 3. Wiring changes happen with the tub **off at the main house panel**: 240 V is inside the bay.
 4. **No USB to the Pico while it's wired to the tub** (it's powered from J1-A pin 7). Use Wi-Fi
@@ -46,13 +47,13 @@ python3 -m venv ~/esphome-venv && ~/esphome-venv/bin/pip install esphome
 `secrets.yaml` (git-ignored) is created from `secrets.example.yaml`. The Pico uses
 `panel_api_encryption_key`. Never print secret values into chat or commit them.
 
-Offline decoder test (no hardware needed):
+Offline test (no hardware needed). It runs the exact PIO words in a simulator against a recording:
 ```
-c++ -std=c++17 -O2 -I components/jacuzzi_panel tools/test_panel_decoder.cpp -o /tmp/tpd
-/tmp/tpd captures/31-j1a-buttons/digital.csv 4 1.0      # must report misplaced=0
+c++ -std=c++17 -O2 -I components/jacuzzi_panel tools/test_bus_sim.cpp -o /tmp/bussim
+/tmp/bussim captures/31-j1a-buttons/digital.csv 4     # must report decoded 100%, misplaced=0
 ```
-(Export `digital.csv` from the `.sal` with Saleae Logic 2 first.) Re-run this after any change
-to `panel_decoder.h`.
+(Export `digital.csv` from the `.sal` with Saleae Logic 2 first.) Re-run it, and
+`tools/check_pio_encoding.cpp`, after any change to `bus_pio.h` or `bus_assembler.h`.
 
 ## What to expect in the logs
 
@@ -60,8 +61,12 @@ to `panel_decoder.h`.
 - Bus up: `frame 1000…  heater=0 jets1=0 jets2=0 slot5=0` (bit 1 is always 1), then `water 94`.
 - After + / −: `set point NN` about 5 s after the display returns to water temperature.
 - Control: `Control ENABLED`, `Pressing scan pos 4` (+), 3 (−), 7 (Jets 1), 2 (Jets 2).
-- Every 30 s: `frames=… bad_groups=… timing_rejects=…`. A few bad groups are normal (the 1 s
-  header, relay noise). Rising `timing_rejects` means presses are being refused, never misplaced.
+- Boot: `PIO: capture pioN smN, press pioN smN, SM clock 20000000 Hz`. A `PIO setup FAILED` or
+  `program word … != SDK` line means the component refused to start; report it.
+- Every 30 s: `frames=… bad=… refusals=… drives=… aborts=… fifo_overflows=…`. **`frames` should
+  rise by ~300 per 30 s** (one frame per 100 ms). Much less means the bus isn't being read
+  cleanly; check the wiring before testing control. `refusals` = frames skipped for a press
+  because their timing looked wrong (safe). `fifo_overflows` should stay 0.
 
 ## Open questions (record findings in docs/j1a-pinout.md)
 

@@ -170,7 +170,9 @@ If anything looks wrong, stop here. See *Troubleshooting*.
 
 ## 7. Connect the reply line and test control (breaker OFF to wire)
 
-Only after step 6 works, and with the pin 4 measurements from step 4 recorded.
+Only after step 6 works, and with the pin 4 measurements from step 4 recorded. In the
+logs, the 30-second stats line `frames=…` must rise by **about 300 every 30 s**. If it rises
+much more slowly, the bus isn't being read cleanly; fix that first.
 
 1. Breaker off. Connect the **pin 4 jumper** to **GP4**:
    - **With a 470 Ω resistor** (preferred): clamp the resistor in the GP4 terminal and connect

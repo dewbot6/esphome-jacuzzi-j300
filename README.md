@@ -54,10 +54,11 @@ In Home Assistant, **Settings → Devices & services** discovers "Jacuzzi J355 P
 
 Every 100 ms the main board clocks 24 data bits to the panel: the heater, both jets and three
 BCD display digits. Then it runs a 7-pulse button scan, during which the panel raises the reply
-line in the pressed button's slot. The Pico samples DATA on each clock edge, in an interrupt
-on its second core, away from Wi-Fi. To press a button it drives the reply line only during
-that button's scan pulse, and only if the clock timing matches exactly. Otherwise it doesn't
-press at all.
+line in the pressed button's slot. The Pico's PIO hardware captures every clock pulse and
+DATA bit with no software in the timing path. Its second core assembles the frames, away from
+Wi-Fi. To press a button, a second PIO state machine drives the reply line from the exact rising
+edge of that button's scan pulse to its falling edge, ignoring sub-microsecond glitches. It
+only arms on a frame whose pulse count and timing check out. Otherwise it doesn't press at all.
 
 Full protocol: **[docs/protocol.md](docs/protocol.md)**.
 
@@ -66,7 +67,7 @@ Full protocol: **[docs/protocol.md](docs/protocol.md)**.
 | Path | Contents |
 |---|---|
 | `jacuzzi_panel.yaml` | ESPHome config for the Pico 2 W |
-| `components/jacuzzi_panel/` | The firmware component. `panel_decoder.h` is platform-free bus logic. |
+| `components/jacuzzi_panel/` | The firmware component. `bus_pio.h` holds the PIO programs; `bus_assembler.h` is platform-free frame logic. |
 | `docs/protocol.md`, `docs/j1a-pinout.md`, `docs/pico2w-pinout.md` | Protocol, connector numbering, Pico wiring and bring-up |
 | `docs/*.webp` | Board photos |
 | `captures/*.sal` | Logic 8 captures on J1-A (open in Saleae Logic 2) |
@@ -79,8 +80,9 @@ Full protocol: **[docs/protocol.md](docs/protocol.md)**.
 - `tools/saleae.py`: drives a Logic 8 through Saleae Logic 2's built-in MCP server
   (127.0.0.1:10530) to record and export captures into `captures/`.
 - `tools/j1a_buttons.py <digital.csv>`: decodes data bits and button-scan bits from a J1-A capture.
-- `tools/test_panel_decoder.cpp`: replays a J1-A capture through the firmware's decoder,
-  including simulated presses and dropped edges (see docs/pico2w-pinout.md).
+- `tools/test_bus_sim.cpp`: runs the firmware's exact PIO programs in a PIO simulator against
+  a J1-A recording, including simulated presses, dropped words and glitches (see docs/pico2w-pinout.md).
+- `tools/check_pio_encoding.cpp`: checks the hand-encoded PIO words against the Pico SDK's encoders.
 
 Python tools need `numpy` (`pip install -r tools/requirements.txt`). Export a `.sal` to
 `digital.csv` from Saleae Logic 2 first (File → Export Raw Data).
