@@ -1,0 +1,169 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1010" width="1200" height="1010" font-family="Helvetica, Arial, sans-serif">
+  <rect width="1200" height="1010" fill="#ffffff"/>
+  <text x="600" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#111">The whole system: topside panel, J-300 board, Pico 2 W, Pixel Shifter</text>
+  <text x="600" y="60" text-anchor="middle" font-size="14" fill="#444">Overview only. Exact terminals: wiring-full.svg. Order of work: SETUP.md. Breaker OFF at the main panel for every wiring change.</text>
+
+  <!-- ================= light ribbon (separate, not tapped) ================= -->
+  <path d="M170 120 V96 H1110 V120" fill="none" stroke="#aaa" stroke-width="5"/>
+  <text x="640" y="90" text-anchor="middle" font-size="12" fill="#777">lights: separate ribbon cable straight from the panel to the board (not tapped, not on the bus)</text>
+
+  <!-- ================= topside panel ================= -->
+  <rect x="40" y="120" width="260" height="230" rx="16" fill="#e8eef5" stroke="#334"/>
+  <text x="170" y="146" text-anchor="middle" font-size="15" font-weight="bold" fill="#111">Topside panel</text>
+  <rect x="95" y="160" width="150" height="50" rx="4" fill="#1b1b1b"/>
+  <text x="170" y="196" text-anchor="middle" font-size="30" font-weight="bold" fill="#ff5a3c" font-family="Menlo, monospace">102</text>
+  <g font-size="12" font-weight="bold" text-anchor="middle" fill="#111">
+    <circle cx="85" cy="250" r="20" fill="#fff" stroke="#334"/><text x="85" y="255">+</text>
+    <circle cx="140" cy="250" r="20" fill="#fff" stroke="#334"/><text x="140" y="255">−</text>
+    <circle cx="200" cy="250" r="20" fill="#fff" stroke="#334"/><text x="200" y="248">Jets</text><text x="200" y="261">1</text>
+    <circle cx="255" cy="250" r="20" fill="#fff" stroke="#334"/><text x="255" y="248">Jets</text><text x="255" y="261">2</text>
+    <circle cx="170" cy="305" r="18" fill="#f5f5f5" stroke="#aaa"/><text x="170" y="309" fill="#777">Light</text>
+  </g>
+  <text x="170" y="340" text-anchor="middle" font-size="11" fill="#555">still works by hand, same as before</text>
+
+  <!-- panel cable -> tap -->
+  <line x1="300" y1="215" x2="420" y2="215" stroke="#555" stroke-width="9"/>
+  <text x="360" y="200" text-anchor="middle" font-size="12" fill="#444">8-wire panel</text>
+  <text x="360" y="240" text-anchor="middle" font-size="12" fill="#444">cable + plug</text>
+
+  <!-- ================= tap ================= -->
+  <rect x="420" y="130" width="220" height="190" rx="10" fill="#fffbea" stroke="#a16207"/>
+  <text x="530" y="154" text-anchor="middle" font-size="15" font-weight="bold" fill="#111">Tap</text>
+  <text x="530" y="172" text-anchor="middle" font-size="12" fill="#444">4 Y-splitters S1–S4</text>
+  <g font-size="12" fill="#222">
+    <text x="436" y="200">• panel plug → 2×4 block</text>
+    <text x="436" y="220">• single ends → J1-A</text>
+    <text x="446" y="236">(S1 = column C1 … S4 = C4,</text>
+    <text x="446" y="252">dots = top row)</text>
+    <text x="436" y="274">• second tails → jumpers</text>
+    <text x="446" y="290">(one per J1-A pin)</text>
+  </g>
+
+  <!-- tap -> J1-A -->
+  <path d="M640 212 H985 V222" fill="none" stroke="#555" stroke-width="9"/>
+  <text x="650" y="204" font-size="12" fill="#444">onto J1-A</text>
+
+  <!-- ================= J-300 board ================= -->
+  <rect x="760" y="120" width="400" height="260" rx="10" fill="#2d6b3c" stroke="#123"/>
+  <text x="960" y="352" text-anchor="middle" font-size="15" font-weight="bold" fill="#fff">Jacuzzi J-300 main board</text>
+  <text x="960" y="370" text-anchor="middle" font-size="11" fill="#cde">6600-087 REV D · PIC firmware 3.61A · 240 V inside the bay</text>
+  <!-- U5 -->
+  <rect x="790" y="230" width="90" height="70" rx="3" fill="#111"/>
+  <text x="835" y="262" text-anchor="middle" font-size="13" font-weight="bold" fill="#fff">U5</text>
+  <text x="835" y="280" text-anchor="middle" font-size="11" fill="#bbb">PIC</text>
+  <!-- J1-A 2x4 -->
+  <rect x="918" y="222" width="134" height="84" rx="4" fill="#111"/>
+  <g font-size="13" font-weight="bold" text-anchor="middle">
+    <rect x="924" y="228" width="28" height="34" fill="#ddd"/><text x="938" y="250">1</text>
+    <rect x="955" y="228" width="28" height="34" fill="#ddd"/><text x="969" y="250">3</text>
+    <rect x="986" y="228" width="28" height="34" fill="#93c5fd"/><text x="1000" y="250">5</text>
+    <rect x="1017" y="228" width="28" height="34" fill="#fca5a5"/><text x="1031" y="250">7</text>
+    <rect x="924" y="266" width="28" height="34" fill="#ddd"/><text x="938" y="288">2</text>
+    <rect x="955" y="266" width="28" height="34" fill="#fdba74"/><text x="969" y="288">4</text>
+    <rect x="986" y="266" width="28" height="34" fill="#93c5fd"/><text x="1000" y="288">6</text>
+    <rect x="1017" y="266" width="28" height="34" fill="#bbb"/><text x="1031" y="288">8</text>
+  </g>
+  <text x="985" y="324" text-anchor="middle" font-size="12" font-weight="bold" fill="#fff">J1-A</text>
+  <path d="M760 212 H985 V222" fill="none" stroke="#555" stroke-width="9"/>
+  <!-- RJ45 -->
+  <rect x="1080" y="225" width="60" height="70" rx="4" fill="#ccc" stroke="#111"/>
+  <text x="1110" y="265" text-anchor="middle" font-size="12" font-weight="bold" fill="#111">RJ45</text>
+  <text x="1110" y="316" text-anchor="middle" font-size="10" fill="#cde">backup reader</text>
+  <text x="1110" y="329" text-anchor="middle" font-size="10" fill="#cde">(leave as is)</text>
+  <!-- light connector -->
+  <rect x="1090" y="120" width="40" height="16" fill="#aaa"/>
+  <!-- pin key -->
+  <g font-size="11" fill="#fff">
+    <text x="780" y="146">5 data · 6 clock (Pico only listens)</text>
+    <text x="780" y="162">7 +5 V · 8 ground</text>
+    <text x="780" y="178">4 button reply (the only line driven)</text>
+  </g>
+
+  <!-- ================= jumpers tap -> Pico ================= -->
+  <path d="M480 320 V420 H250 V470" fill="none" stroke="#666" stroke-width="7"/>
+  <text x="468" y="372" text-anchor="end" font-size="12" fill="#444">7 jumpers: J1-A pins 1, 2, 3*, 5, 6, 7, 8</text>
+  <text x="468" y="388" text-anchor="end" font-size="12" fill="#444">(pin 4's jumper goes to the diode instead)</text>
+
+  <!-- ================= Pico breakout ================= -->
+  <rect x="60" y="470" width="400" height="350" rx="12" fill="#f2f2f2" stroke="#111" stroke-width="2"/>
+  <text x="260" y="496" text-anchor="middle" font-size="15" font-weight="bold" fill="#111">Pico 2 W on screw-terminal breakout</text>
+  <text x="260" y="514" text-anchor="middle" font-size="11" fill="#666">powered from J1-A pin 7 · no USB while wired · Wi-Fi to Home Assistant</text>
+  <text x="80" y="544" font-size="13" font-weight="bold" fill="#111">From the tap</text>
+  <g font-size="12" fill="#222">
+    <circle cx="86" cy="566" r="6" fill="#111"/><text x="98" y="570"><tspan font-weight="bold">GND</tspan> ← pin 8</text>
+    <circle cx="86" cy="592" r="6" fill="#b91c1c"/><text x="98" y="596"><tspan font-weight="bold">VSYS</tspan> ← pin 7 (+5 V)</text>
+    <circle cx="86" cy="618" r="6" fill="#2563eb"/><text x="98" y="622"><tspan font-weight="bold">GP2</tspan> ← pin 6 clock</text>
+    <circle cx="86" cy="644" r="6" fill="#2563eb"/><text x="98" y="648"><tspan font-weight="bold">GP3</tspan> ← pin 5 data</text>
+    <circle cx="86" cy="670" r="6" fill="#888"/><text x="98" y="674"><tspan font-weight="bold">GP5</tspan> ← pin 1</text>
+    <circle cx="86" cy="696" r="6" fill="#888"/><text x="98" y="700"><tspan font-weight="bold">GP6</tspan> ← pin 2</text>
+    <circle cx="86" cy="722" r="6" fill="#fff" stroke="#888" stroke-dasharray="2 2"/><text x="98" y="726"><tspan font-weight="bold">GP7</tspan> ← pin 3*</text>
+  </g>
+  <text x="80" y="760" font-size="11" fill="#666">* only if pin 3 → GND measured under ~8 kΩ,</text>
+  <text x="80" y="774" font-size="11" fill="#666">  otherwise tape that jumper off</text>
+  <text x="80" y="800" font-size="11" fill="#666">GP4 is no longer wired to pin 4 directly</text>
+  <!-- shifter-side terminals -->
+  <text x="370" y="544" text-anchor="middle" font-size="13" font-weight="bold" fill="#111">To the shifter</text>
+  <g font-size="13" font-weight="bold" text-anchor="middle" fill="#111">
+    <rect x="300" y="560" width="140" height="32" rx="5" fill="#e5e5e5" stroke="#111"/><text x="370" y="581">GND</text>
+    <rect x="300" y="610" width="140" height="32" rx="5" fill="#ede4ff" stroke="#7c3aed"/><text x="370" y="631">3V3 (OUT)</text>
+    <rect x="300" y="660" width="140" height="32" rx="5" fill="#fff1e0" stroke="#d97706"/><text x="370" y="681">GP4</text>
+    <rect x="300" y="710" width="140" height="32" rx="5" fill="#e5e5e5" stroke="#111"/><text x="370" y="731">GND (another)</text>
+  </g>
+
+  <!-- ================= Pixel Shifter ================= -->
+  <rect x="560" y="510" width="270" height="270" rx="14" fill="#1f1f1f"/>
+  <text x="695" y="536" text-anchor="middle" font-size="14" font-weight="bold" fill="#fff">Adafruit Pixel Shifter</text>
+  <text x="695" y="552" text-anchor="middle" font-size="11" fill="#bbb">3.3 V in → 5 V out</text>
+  <rect x="575" y="560" width="62" height="190" rx="4" fill="#2f9e6a"/>
+  <rect x="753" y="560" width="62" height="190" rx="4" fill="#2f9e6a"/>
+  <text x="606" y="768" text-anchor="middle" font-size="11" font-weight="bold" fill="#fff">INPUT</text>
+  <text x="784" y="768" text-anchor="middle" font-size="11" font-weight="bold" fill="#fff">OUTPUT</text>
+  <g font-size="13" font-weight="bold" fill="#fff" text-anchor="middle">
+    <circle cx="592" cy="576" r="9" fill="#ddd"/><text x="619" y="581">G</text>
+    <circle cx="592" cy="626" r="9" fill="#ddd"/><text x="619" y="631">V</text>
+    <circle cx="592" cy="676" r="9" fill="#ddd"/><text x="619" y="681">DAT</text>
+    <circle cx="592" cy="726" r="9" fill="#ddd"/><text x="619" y="731">CLK</text>
+    <circle cx="798" cy="576" r="9" fill="#ddd"/><text x="771" y="581">G</text>
+    <circle cx="798" cy="626" r="9" fill="#ddd"/><text x="771" y="631">D5</text>
+    <circle cx="798" cy="676" r="9" fill="#ddd"/><text x="770" y="681">!D5</text>
+    <circle cx="798" cy="726" r="9" fill="#ddd"/><text x="771" y="731">C5</text>
+  </g>
+  <!-- Pico -> shifter wires -->
+  <line x1="440" y1="576" x2="583" y2="576" stroke="#111" stroke-width="4"/>
+  <line x1="440" y1="626" x2="583" y2="626" stroke="#7c3aed" stroke-width="4"/>
+  <line x1="440" y1="676" x2="583" y2="676" stroke="#d97706" stroke-width="4"/>
+  <line x1="440" y1="726" x2="583" y2="726" stroke="#111" stroke-width="4"/>
+  <g font-size="12" font-weight="bold" fill="#b91c1c">
+    <text x="840" y="580">nothing</text>
+    <text x="840" y="680">nothing (inverted!)</text>
+    <text x="840" y="730">nothing</text>
+  </g>
+
+  <!-- D5 -> diode -> pin 4 jumper -> tap -> J1-A pin 4 -->
+  <line x1="807" y1="626" x2="880" y2="626" stroke="#d97706" stroke-width="4"/>
+  <line x1="880" y1="626" x2="900" y2="626" stroke="#888" stroke-width="3"/>
+  <rect x="900" y="614" width="60" height="24" rx="5" fill="#f3d9b1" stroke="#7a5a2a"/>
+  <rect x="946" y="614" width="10" height="24" fill="#111"/>
+  <line x1="960" y1="626" x2="990" y2="626" stroke="#888" stroke-width="3"/>
+  <text x="930" y="604" text-anchor="middle" font-size="13" font-weight="bold" fill="#111">BAT85</text>
+  <text x="951" y="658" text-anchor="middle" font-size="11" font-weight="bold" fill="#111">stripe →</text>
+  <path d="M990 626 H1010 V420 H620 V320" fill="none" stroke="#d97706" stroke-width="4" stroke-dasharray="10 7"/>
+  <text x="1022" y="500" font-size="12" fill="#444">pin 4 jumper</text>
+  <text x="1022" y="516" font-size="12" fill="#444">(male end in S2's</text>
+  <text x="1022" y="532" font-size="12" fill="#444">second tail →</text>
+  <text x="1022" y="548" font-size="12" fill="#444">J1-A pin 4)</text>
+  <text x="815" y="412" text-anchor="middle" font-size="12" fill="#444">button presses travel this way</text>
+
+  <!-- ================= how it works ================= -->
+  <g transform="translate(40,840)">
+    <rect x="0" y="0" width="1120" height="150" rx="10" fill="#f7f7f7" stroke="#bbb"/>
+    <text x="20" y="28" font-size="15" font-weight="bold" fill="#111">How it works</text>
+    <g font-size="13" fill="#222">
+      <text x="20" y="54"><tspan font-weight="bold" fill="#2563eb">Reading:</tspan> about 11 times a second the board sends the panel its display digits and heater/jets state on pins 5 + 6.</text>
+      <text x="20" y="74">The Pico just listens on GP2/GP3 and reports water temperature, set point, heater and jets to Home Assistant.</text>
+      <text x="20" y="100"><tspan font-weight="bold" fill="#d97706">Pressing:</tspan> after each frame the board scans the buttons with 7 pulses and listens on pin 4. To "press" a button the Pico</text>
+      <text x="20" y="120">raises GP4 during that button's pulse; the shifter turns it into 5 V and the diode passes it onto pin 4. Between presses GP4 is low</text>
+      <text x="20" y="140">and the diode blocks, so the real panel's buttons keep working. Yaml must say <tspan font-family="Menlo, monospace" font-weight="bold">reply_buffer: diode</tspan> for this wiring.</text>
+    </g>
+  </g>
+</svg>

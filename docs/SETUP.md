@@ -12,6 +12,8 @@ the tub, with Claude Code helping (see [`CLAUDE.md`](../CLAUDE.md)).
 ![Wiring diagram](wiring.svg)
 
 With the 5 V buffer added in step 8, the complete wiring is [wiring-full.svg](wiring-full.svg).
+For the big picture (topside panel, tap, J-300 board, Pico, Pixel Shifter), see
+[wiring-system.svg](wiring-system.svg).
 
 ---
 
