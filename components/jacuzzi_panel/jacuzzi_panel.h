@@ -37,6 +37,8 @@ class JacuzziPanel : public Component {
   // true: GP4 feeds a 5 V buffer whose output reaches J1-A pin 4 through a diode, so GP4 is
   // driven at all times (low = released). false: GP4 wired straight to pin 4, high-Z idle.
   void set_reply_diode(bool d) { reply_diode_ = d; }
+  // Frames a press is held for (1..10, ~92 ms each).
+  void set_press_frames(uint8_t f) { press_frames_ = f; }
   void set_water_sensor(sensor::Sensor *s) { water_ = s; }
   void set_setpoint_sensor(sensor::Sensor *s) { setpoint_ = s; }
   void set_display_sensor(sensor::Sensor *s) { display_ = s; }
@@ -61,7 +63,6 @@ class JacuzziPanel : public Component {
   static void aux_isr_(void *arg);
 
  protected:
-  static constexpr uint8_t PRESS_FRAMES = 3;        // hold a press for 3 frames (~275 ms)
   static constexpr uint32_t PRESS_GAP_MS = 400;     // idle between queued presses
   static constexpr uint32_t BUS_TIMEOUT_MS = 2000;  // no frames for this long = bus lost
   static constexpr uint32_t STABLE_MS = 5000;       // display unchanged this long = water temp
@@ -92,6 +93,7 @@ class JacuzziPanel : public Component {
   uint8_t clock_pin_{2}, data_pin_{3}, reply_pin_{4};
   uint8_t reply_drive_ma_{4};
   bool reply_diode_{false};
+  uint8_t press_frames_{3};  // hold a press for 3 frames (~275 ms) unless configured
   volatile bool core1_go_{false};
 
   ::jacuzzi_bus::BusAssembler bus_;

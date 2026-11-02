@@ -250,9 +250,11 @@ Do it in this order. The diode only touches pin 4 once the firmware is in `diode
 7. **Control test**, Control Enabled on, one step at a time with someone at the panel:
    **Temp Up** twice (the first press shows the set point, the second raises it by 1) →
    **Temp Down** to put it back → **Jets 2** on → **Jets 2** off → Control Enabled off.
-   `drives` should rise by 3 per press.
+   `drives` should rise by 3 per press (by `press_frames` if set).
    - **Presses logged but no reaction:** check the diode's direction (stripe toward pin 4)
-     and the DAT/GP4 wire. Don't change anything else; report with the log.
+     and the DAT/GP4 wire. Then try a longer press: add `press_frames: 8` under
+     `reply_buffer: diode` (default 3, max 10; ~92 ms per frame), flash, repeat the test.
+     The boot log shows `Press length: 8 frames`. Don't change anything else; report with the log.
 
 To go back to the original wiring: breaker off, remove the Pixel Shifter and diode, set
 `reply_buffer: none`, flash, then reconnect the pin 4 jumper to GP4 as in step 7.

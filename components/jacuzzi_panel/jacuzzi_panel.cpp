@@ -323,7 +323,7 @@ void JacuzziPanel::loop() {
   if (!this->press_in_flight_ && this->q_len_ > 0 && now - this->press_done_ms_ >= PRESS_GAP_MS) {
     const uint8_t pos = this->queue_[this->q_head_];
     __sync_synchronize();
-    if (this->bus_.arm_press(pos, PRESS_FRAMES)) {
+    if (this->bus_.arm_press(pos, this->press_frames_)) {
       this->press_in_flight_ = true;
       ESP_LOGI(TAG, "Pressing scan pos %u", pos);
     }
@@ -415,6 +415,7 @@ void JacuzziPanel::dump_config() {
                 this->clock_pin_, this->data_pin_, this->reply_pin_, this->reply_drive_ma_);
   ESP_LOGCONFIG(TAG, "  Reply wiring: %s", this->reply_diode_ ? "diode (GP4 -> 5 V buffer -> diode -> J1-A pin 4; GP4 low when idle)"
                                                               : "none (GP4 -> J1-A pin 4 directly; high-Z when idle)");
+  ESP_LOGCONFIG(TAG, "  Press length: %u frames (~%u ms)", this->press_frames_, this->press_frames_ * 92u);
   if (this->is_failed()) {
     ESP_LOGE(TAG, "  PIO setup FAILED: not reading the bus, control unavailable");
   } else {

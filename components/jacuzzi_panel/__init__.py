@@ -30,6 +30,7 @@ CONF_DATA_PIN = "data_pin"
 CONF_REPLY_PIN = "reply_pin"
 CONF_REPLY_DRIVE_STRENGTH = "reply_drive_strength"
 CONF_REPLY_BUFFER = "reply_buffer"
+CONF_PRESS_FRAMES = "press_frames"
 CONF_WATER_TEMPERATURE = "water_temperature"
 CONF_SET_TEMPERATURE = "set_temperature"
 CONF_DISPLAY_TEMPERATURE = "display_temperature"
@@ -113,6 +114,8 @@ CONFIG_SCHEMA = cv.Schema(
         # diode: GP4 -> 5 V buffer (Adafruit Pixel Shifter) -> diode -> J1-A pin 4; GP4 is
         # always driven, low when idle. Must match the wiring (docs/SETUP.md step 8).
         cv.Optional(CONF_REPLY_BUFFER, default="none"): cv.enum({"none": False, "diode": True}, lower=True),
+        # Frames (~92 ms each) a press is held for. A human tap showed the reply in 2-8 frames.
+        cv.Optional(CONF_PRESS_FRAMES, default=3): cv.int_range(min=1, max=10),
         cv.Optional(CONF_WATER_TEMPERATURE): TEMP_SCHEMA,
         cv.Optional(CONF_SET_TEMPERATURE): TEMP_SCHEMA,
         cv.Optional(CONF_DISPLAY_TEMPERATURE): TEMP_SCHEMA,
@@ -149,6 +152,7 @@ async def to_code(config):
     cg.add(var.set_pins(config[CONF_CLOCK_PIN], config[CONF_DATA_PIN], config[CONF_REPLY_PIN]))
     cg.add(var.set_reply_drive_ma(config[CONF_REPLY_DRIVE_STRENGTH]))
     cg.add(var.set_reply_diode(config[CONF_REPLY_BUFFER]))
+    cg.add(var.set_press_frames(config[CONF_PRESS_FRAMES]))
 
     for key, setter in (
         (CONF_WATER_TEMPERATURE, "set_water_sensor"),

@@ -21,6 +21,10 @@ confirm each check before moving on, and don't skip the measurement steps.
   even the first-press "show set point" happens, while a hand press logged fine. Most likely the
   3.3 V high is too low for the board's input. **Next: 5 V buffer** (Adafruit Pixel Shifter + BAT85
   diode, `reply_buffer: diode`), docs/SETUP.md step 8; parts ordered 2026-10-27.
+  2026-11-02 buffer test: wired, reading fine, hand presses fine, **presses still ignored at 5 V**
+  (3 frames each). Suspect the panel actively drives pin 4 low (its reply edges are clock-timed,
+  shift-register style), which no added source can overpower. Next: `press_frames: 8` (rules out
+  a too-short press), then a panel-unplugged press test and a meter check of the shifter.
 
 ## Safety rules (non-negotiable)
 
