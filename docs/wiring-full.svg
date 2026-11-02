@@ -1,0 +1,200 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1130" width="1080" height="1130" font-family="Helvetica, Arial, sans-serif">
+  <rect width="1080" height="1130" fill="#ffffff"/>
+  <text x="540" y="36" text-anchor="middle" font-size="22" font-weight="bold" fill="#111">Complete wiring: J1-A → Pico 2 W breakout → Pixel Shifter → diode → J1-A pin 4</text>
+  <text x="540" y="60" text-anchor="middle" font-size="14" fill="#444">Breaker OFF at the main house panel while wiring. jacuzzi_panel.yaml must say  reply_buffer: diode  (docs/SETUP.md step 8).</text>
+
+  <!-- column headers -->
+  <text x="150" y="100" text-anchor="middle" font-size="15" font-weight="bold" fill="#111">Pico breakout terminal</text>
+  <text x="880" y="100" text-anchor="middle" font-size="15" font-weight="bold" fill="#111">J1-A pin (splitter tail B)</text>
+
+  <!-- ================= J1-A ↔ Pico rows ================= -->
+  <g font-size="14">
+    <!-- pin 1 -->
+    <rect x="60" y="120" width="180" height="40" rx="6" fill="#f2f2f2" stroke="#888"/>
+    <text x="150" y="146" text-anchor="middle" font-weight="bold" fill="#111">GP5</text>
+    <line x1="240" y1="140" x2="760" y2="140" stroke="#888" stroke-width="4"/>
+    <rect x="760" y="120" width="240" height="40" rx="6" fill="#f2f2f2" stroke="#888"/>
+    <text x="776" y="146" fill="#111"><tspan font-weight="bold">1</tspan>  unknown</text>
+    <text x="500" y="132" text-anchor="middle" font-size="12" fill="#666">listen only</text>
+
+    <!-- pin 2 -->
+    <rect x="60" y="175" width="180" height="40" rx="6" fill="#f2f2f2" stroke="#888"/>
+    <text x="150" y="201" text-anchor="middle" font-weight="bold" fill="#111">GP6</text>
+    <line x1="240" y1="195" x2="760" y2="195" stroke="#888" stroke-width="4"/>
+    <rect x="760" y="175" width="240" height="40" rx="6" fill="#f2f2f2" stroke="#888"/>
+    <text x="776" y="201" fill="#111"><tspan font-weight="bold">2</tspan>  unknown</text>
+    <text x="500" y="187" text-anchor="middle" font-size="12" fill="#666">listen only</text>
+
+    <!-- pin 3 -->
+    <rect x="60" y="230" width="180" height="40" rx="6" fill="#f2f2f2" stroke="#888"/>
+    <text x="150" y="256" text-anchor="middle" font-weight="bold" fill="#111">GP7</text>
+    <line x1="240" y1="250" x2="760" y2="250" stroke="#888" stroke-width="4" stroke-dasharray="10 8"/>
+    <rect x="760" y="230" width="240" height="40" rx="6" fill="#f2f2f2" stroke="#888"/>
+    <text x="776" y="256" fill="#111"><tspan font-weight="bold">3</tspan>  unknown</text>
+    <text x="500" y="242" text-anchor="middle" font-size="12" fill="#a33">listen only; only if pin 3 → GND measured under ~8 kΩ</text>
+
+    <!-- pin 4: no direct wire to the Pico any more -->
+    <rect x="60" y="285" width="180" height="40" rx="6" fill="#ffffff" stroke="#bbb" stroke-dasharray="4 4"/>
+    <text x="150" y="304" text-anchor="middle" font-size="12" fill="#888">(GP4 now goes to the</text>
+    <text x="150" y="319" text-anchor="middle" font-size="12" fill="#888">Pixel Shifter, below)</text>
+    <rect x="760" y="285" width="240" height="40" rx="6" fill="#fff1e0" stroke="#d97706"/>
+    <text x="776" y="311" fill="#111"><tspan font-weight="bold">4</tspan>  button REPLY</text>
+    <text x="500" y="309" text-anchor="middle" font-size="12" font-weight="bold" fill="#d97706">pin 4 is fed from the diode (right side, dashed) — no wire straight to GP4</text>
+
+    <!-- pin 5 data -->
+    <rect x="60" y="340" width="180" height="40" rx="6" fill="#e6f6ea" stroke="#15803d"/>
+    <text x="150" y="366" text-anchor="middle" font-weight="bold" fill="#111">GP3</text>
+    <line x1="240" y1="360" x2="760" y2="360" stroke="#15803d" stroke-width="4"/>
+    <rect x="760" y="340" width="240" height="40" rx="6" fill="#e6f6ea" stroke="#15803d"/>
+    <text x="776" y="366" fill="#111"><tspan font-weight="bold">5</tspan>  DATA</text>
+    <text x="500" y="352" text-anchor="middle" font-size="12" fill="#666">read only</text>
+
+    <!-- pin 6 clock -->
+    <rect x="60" y="395" width="180" height="40" rx="6" fill="#e6efff" stroke="#1d4ed8"/>
+    <text x="150" y="421" text-anchor="middle" font-weight="bold" fill="#111">GP2</text>
+    <line x1="240" y1="415" x2="760" y2="415" stroke="#1d4ed8" stroke-width="4"/>
+    <rect x="760" y="395" width="240" height="40" rx="6" fill="#e6efff" stroke="#1d4ed8"/>
+    <text x="776" y="421" fill="#111"><tspan font-weight="bold">6</tspan>  CLOCK</text>
+    <text x="500" y="407" text-anchor="middle" font-size="12" fill="#666">read only</text>
+
+    <!-- pin 7 +5V -->
+    <rect x="60" y="450" width="180" height="40" rx="6" fill="#fde8e8" stroke="#b91c1c"/>
+    <text x="150" y="476" text-anchor="middle" font-weight="bold" fill="#111">VSYS</text>
+    <line x1="240" y1="470" x2="760" y2="470" stroke="#b91c1c" stroke-width="4"/>
+    <rect x="760" y="450" width="240" height="40" rx="6" fill="#fde8e8" stroke="#b91c1c"/>
+    <text x="776" y="476" fill="#111"><tspan font-weight="bold">7</tspan>  +5 V</text>
+    <text x="500" y="462" text-anchor="middle" font-size="12" fill="#666">powers the Pico (no USB at the tub)</text>
+
+    <!-- pin 8 GND -->
+    <rect x="60" y="505" width="180" height="40" rx="6" fill="#e5e5e5" stroke="#111"/>
+    <text x="150" y="531" text-anchor="middle" font-weight="bold" fill="#111">GND</text>
+    <line x1="240" y1="525" x2="760" y2="525" stroke="#111" stroke-width="4"/>
+    <rect x="760" y="505" width="240" height="40" rx="6" fill="#e5e5e5" stroke="#111"/>
+    <text x="776" y="531" fill="#111"><tspan font-weight="bold">8</tspan>  GROUND</text>
+  </g>
+
+  <!-- ================= Pico extra terminals → Pixel Shifter ================= -->
+  <line x1="40" y1="565" x2="1040" y2="565" stroke="#ddd" stroke-width="1"/>
+  <text x="150" y="592" text-anchor="middle" font-size="13" font-weight="bold" fill="#111">more Pico terminals</text>
+  <g font-size="14" font-weight="bold" text-anchor="middle" fill="#111">
+    <rect x="60" y="610" width="180" height="40" rx="6" fill="#e5e5e5" stroke="#111"/>
+    <text x="150" y="636">GND</text>
+    <rect x="60" y="670" width="180" height="40" rx="6" fill="#efe7fd" stroke="#7c3aed"/>
+    <text x="150" y="696">3V3 (OUT)</text>
+    <rect x="60" y="730" width="180" height="40" rx="6" fill="#fff1e0" stroke="#d97706"/>
+    <text x="150" y="756">GP4</text>
+    <rect x="60" y="790" width="180" height="40" rx="6" fill="#e5e5e5" stroke="#111"/>
+    <text x="150" y="816">GND (another one)</text>
+  </g>
+
+  <!-- Pixel Shifter board -->
+  <rect x="390" y="590" width="280" height="270" rx="14" fill="#1f1f1f"/>
+  <text x="530" y="612" text-anchor="middle" font-size="14" font-weight="bold" fill="#fff">Adafruit Pixel Shifter</text>
+  <rect x="410" y="620" width="70" height="220" rx="4" fill="#2f9e6a"/>
+  <rect x="580" y="620" width="70" height="220" rx="4" fill="#2f9e6a"/>
+  <text x="445" y="854" text-anchor="middle" font-size="12" font-weight="bold" fill="#fff">INPUT</text>
+  <text x="615" y="854" text-anchor="middle" font-size="12" font-weight="bold" fill="#fff">OUTPUT</text>
+  <g font-size="14" font-weight="bold" fill="#fff" text-anchor="middle">
+    <circle cx="428" cy="630" r="10" fill="#ddd"/><text x="460" y="635">G</text>
+    <circle cx="428" cy="690" r="10" fill="#ddd"/><text x="460" y="695">V</text>
+    <circle cx="428" cy="750" r="10" fill="#ddd"/><text x="460" y="755">DAT</text>
+    <circle cx="428" cy="810" r="10" fill="#ddd"/><text x="460" y="815">CLK</text>
+    <circle cx="632" cy="630" r="10" fill="#ddd"/><text x="600" y="635">G</text>
+    <circle cx="632" cy="690" r="10" fill="#ddd"/><text x="600" y="695">D5</text>
+    <circle cx="632" cy="750" r="10" fill="#ddd"/><text x="598" y="755">!D5</text>
+    <circle cx="632" cy="810" r="10" fill="#ddd"/><text x="600" y="815">C5</text>
+  </g>
+
+  <!-- Pico → INPUT wires -->
+  <line x1="240" y1="630" x2="418" y2="630" stroke="#111" stroke-width="4"/>
+  <line x1="240" y1="690" x2="418" y2="690" stroke="#7c3aed" stroke-width="4"/>
+  <line x1="240" y1="750" x2="418" y2="750" stroke="#d97706" stroke-width="4"/>
+  <line x1="240" y1="810" x2="418" y2="810" stroke="#111" stroke-width="4"/>
+  <g font-size="12" fill="#444" text-anchor="middle">
+    <text x="320" y="622">ground</text>
+    <text x="320" y="682">3.3 V power (not 5 V)</text>
+    <text x="320" y="742">reply signal</text>
+    <text x="320" y="802">unused input → low</text>
+  </g>
+
+  <!-- unused outputs -->
+  <g font-size="12" fill="#b91c1c" font-weight="bold">
+    <text x="682" y="635">nothing</text>
+    <text x="682" y="755">nothing (inverted output!)</text>
+    <text x="682" y="815">nothing</text>
+  </g>
+
+  <!-- D5 → diode → back up to J1-A pin 4 -->
+  <line x1="642" y1="690" x2="700" y2="690" stroke="#d97706" stroke-width="4"/>
+  <line x1="700" y1="690" x2="725" y2="690" stroke="#888" stroke-width="3"/>
+  <rect x="725" y="678" width="64" height="24" rx="5" fill="#f3d9b1" stroke="#7a5a2a"/>
+  <rect x="774" y="678" width="10" height="24" fill="#111"/>
+  <line x1="789" y1="690" x2="815" y2="690" stroke="#888" stroke-width="3"/>
+  <text x="757" y="668" text-anchor="middle" font-size="13" font-weight="bold" fill="#111">BAT85 diode</text>
+  <text x="779" y="720" text-anchor="middle" font-size="12" font-weight="bold" fill="#111">stripe → pin 4</text>
+  <line x1="815" y1="690" x2="1040" y2="690" stroke="#d97706" stroke-width="4" stroke-dasharray="10 8"/>
+  <line x1="1040" y1="690" x2="1040" y2="305" stroke="#d97706" stroke-width="4" stroke-dasharray="10 8"/>
+  <line x1="1040" y1="305" x2="1000" y2="305" stroke="#d97706" stroke-width="4" stroke-dasharray="10 8"/>
+  <g font-size="12" fill="#444">
+    <text x="800" y="596">pin 4's tail B → male-to-female jumper;</text>
+    <text x="800" y="612">its female end slides onto the diode's</text>
+    <text x="800" y="628">striped leg. Tape or heat-shrink it.</text>
+  </g>
+
+  <!-- ================= bottom: J1-A physical + rules ================= -->
+  <g transform="translate(60,905)">
+    <text x="0" y="0" font-size="14" font-weight="bold" fill="#111">J1-A on the board (PN text upright; RJ45 to the right)</text>
+    <g font-size="14" text-anchor="middle">
+      <rect x="0" y="14" width="232" height="96" rx="6" fill="#222"/>
+      <rect x="10" y="22" width="48" height="36" fill="#fafafa"/><text x="34" y="46">1</text>
+      <rect x="66" y="22" width="48" height="36" fill="#fafafa"/><text x="90" y="46">3</text>
+      <rect x="122" y="22" width="48" height="36" fill="#fafafa"/><text x="146" y="46">5</text>
+      <rect x="178" y="22" width="48" height="36" fill="#fafafa"/><text x="202" y="46">7</text>
+      <rect x="10" y="66" width="48" height="36" fill="#fafafa"/><text x="34" y="90">2</text>
+      <rect x="66" y="66" width="48" height="36" fill="#fff1e0"/><text x="90" y="90">4</text>
+      <rect x="122" y="66" width="48" height="36" fill="#fafafa"/><text x="146" y="90">6</text>
+      <rect x="178" y="66" width="48" height="36" fill="#fafafa"/><text x="202" y="90">8</text>
+      <text x="34" y="132" font-weight="bold" fill="#111">S1</text>
+      <text x="90" y="132" font-weight="bold" fill="#111">S2</text>
+      <text x="146" y="132" font-weight="bold" fill="#111">S3</text>
+      <text x="202" y="132" font-weight="bold" fill="#111">S4</text>
+      <text x="-12" y="46" font-size="11" fill="#444" text-anchor="end">top</text>
+      <text x="-12" y="90" font-size="11" fill="#444" text-anchor="end">bottom</text>
+    </g>
+    <g font-size="12" fill="#222">
+      <text x="0" y="160">• One Y-splitter per column (S1 = pins 1/2 … S4 = 7/8).</text>
+      <text x="0" y="178">• Tail A of each → 2×4 block → panel plug (panel stays connected).</text>
+      <text x="0" y="196">• Tail B → the wires drawn above.</text>
+    </g>
+  </g>
+
+  <g transform="translate(520,890)">
+    <rect x="0" y="0" width="300" height="220" rx="10" fill="#f7f7f7" stroke="#bbb"/>
+    <text x="16" y="26" font-size="14" font-weight="bold" fill="#111">Checks after power-on</text>
+    <g font-size="12" fill="#222">
+      <text x="16" y="50">• Boot log: Reply wiring: diode</text>
+      <text x="16" y="70">• frames rise ~330 every 30 s</text>
+      <text x="16" y="90">• Panel buttons still work by hand</text>
+      <text x="26" y="106">(+ twice → set point NN logged)</text>
+      <text x="16" y="126">• Then Control Enabled → Temp Up ×2,</text>
+      <text x="26" y="142">Temp Down, Jets 2 on/off</text>
+      <text x="16" y="162">• drives rises 3 per press</text>
+      <text x="16" y="182">• Control Enabled off when done</text>
+    </g>
+  </g>
+
+  <g transform="translate(840,890)">
+    <rect x="0" y="0" width="200" height="220" rx="10" fill="#fff5f5" stroke="#b91c1c"/>
+    <text x="100" y="26" text-anchor="middle" font-size="14" font-weight="bold" fill="#b91c1c">Never</text>
+    <g font-size="12" fill="#222">
+      <text x="14" y="50">• use !D5 (high when idle)</text>
+      <text x="14" y="74">• put 5 V (VSYS) on the</text>
+      <text x="24" y="90">Shifter's V: use 3V3 OUT</text>
+      <text x="14" y="114">• connect the diode to</text>
+      <text x="24" y="130">pin 4 while the yaml says</text>
+      <text x="24" y="146">reply_buffer: none</text>
+      <text x="14" y="170">• drive CLOCK or DATA</text>
+      <text x="14" y="194">• wire with the breaker on</text>
+    </g>
+  </g>
+</svg>

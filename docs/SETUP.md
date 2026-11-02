@@ -11,6 +11,8 @@ the tub, with Claude Code helping (see [`CLAUDE.md`](../CLAUDE.md)).
 
 ![Wiring diagram](wiring.svg)
 
+With the 5 V buffer added in step 8, the complete wiring is [wiring-full.svg](wiring-full.svg).
+
 ---
 
 ## 0. Safety: read first
@@ -209,6 +211,11 @@ passes, low is blocked, and pin 4 stays free for the real panel. `reply_buffer: 
 `jacuzzi_panel.yaml` tells the firmware to hold GP4 firmly low between presses.
 
 ![Buffer wiring](wiring-buffer.svg)
+
+Everything together (all J1-A pins, the Pico, the Pixel Shifter and the diode):
+[wiring-full.svg](wiring-full.svg)
+
+![Complete wiring](wiring-full.svg)
 
 Do it in this order. The diode only touches pin 4 once the firmware is in `diode` mode.
 
